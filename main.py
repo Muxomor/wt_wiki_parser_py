@@ -4,9 +4,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
-from page_helper import PageHelper  # Импортируем вспомогательный класс из отдельного модуля
+from page_helper import PageHelper  # Импортируем класс PageHelper
 
 def read_config(config_path='config.txt'):
     """
@@ -38,18 +37,15 @@ def configure_driver(config):
         if param not in config:
             raise ValueError(f"Отсутствует обязательный параметр: {param} в config.txt")
     
-    # Если указан путь к firefox, задаем его в опциях
     if 'firefox_binary' in config and config['firefox_binary']:
         options.binary_location = config['firefox_binary']
     
     if config.get('headless', 'true').lower() == 'true':
         options.add_argument("--headless")
     
-    # Отключаем загрузку изображений, если требуется
     if config.get('load_images', 'true').lower() == 'false':
         options.set_preference("permissions.default.image", 2)
     
-    # Отключаем flash-плагин и кэширование
     options.set_preference("dom.ipc.plugins.enabled.libflashplayer.so", False)
     options.set_preference("browser.cache.disk.enable", False)
     options.set_preference("browser.cache.memory.enable", False)
@@ -81,12 +77,11 @@ def main():
         print("Страница загружена")
         print(f"Заголовок страницы: {driver.title}")
         
-        # Ожидаем появления контейнера с меню (например, с текстом VEHICLES)
         if not helper.wait_for_container():
             print("Не удалось обнаружить контейнер с меню, завершаем работу.")
             return
         
-        # Определяем разделы, которые нужно обработать
+        # Определяем разделы для обработки
         target_sections = [
             'Aviation', 'Helicopters', 'Ground Vehicles',
             'Bluewater Fleet', 'Coastal Fleet'
@@ -94,16 +89,17 @@ def main():
         
         for section in target_sections:
             try:
-                # Ищем элемент навигационного меню для текущего раздела по XPath
+                # Ищем актуальный элемент раздела по XPath
                 nav_item = helper.wait.until(
-    EC.presence_of_element_located((By.XPATH, f"//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='{section}']/.."))
-)
-                # Делаем клик по элементу, чтобы перейти в раздел
+                    EC.presence_of_element_located(
+                        (By.XPATH, f"//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='{section}']/..")
+                    )
+                )
                 print(f"\nНачинаем обработку раздела: {section}")
                 nav_item.click()
                 print(f"Переход в раздел {section} выполнен")
                 
-                # Ожидаем появления кнопки "List" по ID и кликаем по ней
+                # Ожидаем кнопку "List" и кликаем по ней (используем JS-клик при необходимости)
                 list_button = helper.wait_for_id('wt-show-list')
                 if list_button:
                     try:
@@ -112,67 +108,27 @@ def main():
                         print(f"Обычный клик не сработал: {str(e)}. Пробую JS click.")
                         driver.execute_script("arguments[0].click();", list_button)
                     print("Кнопка List активирована")
-                    time.sleep(1)  # Пауза для обновления DOM
+                    time.sleep(1)
                     
-                    # Обновляем список строк техники и получаем их общее количество
+                    # Получаем актуальный список строк техники
                     initial_rows = helper.get_vehicle_rows()
                     total_rows = len(initial_rows)
                     print(f"Общее количество строк техники: {total_rows}")
                     
-                    # Итерируем по записям. На каждой итерации повторно получаем актуальные строки
                     for idx in range(total_rows):
                         try:
                             rows = helper.get_vehicle_rows()
                             if idx >= len(rows):
                                 break
                             row = rows[idx]
-                            
-                            # Разбираем строку, используя позиционное обращение к ячейкам
-                            cells = row.find_elements(By.TAG_NAME, 'td')
-                            # Ссылка на подробности техники
-                            try:
-                                name_cell = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a')
-                                link = name_cell.get_attribute('href')
-                            except Exception as e:
-                                print(f"Ошибка при получении ссылки: {str(e)}")
-                                link = ''
-                            # Страна – из атрибута data-value ячейки с классом wt-ulist_unit-country
-                            try:
-                                country_cell = row.find_element(By.CSS_SELECTOR, 'td.wt-ulist_unit-country')
-                                country = country_cell.get_attribute('data-value')
-                            except Exception as e:
-                                print(f"Ошибка при получении страны: {str(e)}")
-                                country = ''
-                            # Ранг – 4-я ячейка (если есть)
-                            rank = cells[3].text.strip() if len(cells) > 3 else ''
-                            # Battle rating – ячейка с классом "br" (обычно 5-я)
-                            try:
-                                battle_cell = row.find_element(By.CSS_SELECTOR, 'td.br')
-                                battle_rating = battle_cell.text.strip()
-                            except Exception as e:
-                                print(f"Ошибка при получении battle_rating: {str(e)}")
-                                battle_rating = ''
-                            # Warpoints – 6-я ячейка (если есть); если текст равен "—", заменяем на пустую строку
-                            warpoints = cells[5].text.strip() if len(cells) > 5 else ''
-                            if warpoints == '—':
-                                warpoints = ''
-                            
-                            data = {
-                                'link': link,
-                                'country': country,
-                                'battle_rating': battle_rating,
-                                'warpoints': warpoints,
-                                'rank': rank
-                            }
+                            data = helper.parse_vehicle_row(row, section)
                             print(f"Запись {idx + 1}: {data}")
                         except Exception as e:
                             print(f"Ошибка при обработке записи {idx + 1}: {str(e)}")
                 else:
                     print(f"Не удалось активировать List View для раздела {section}")
                 
-                # Задержка перед обработкой следующего раздела
                 time.sleep(1)
-            
             except Exception as e:
                 print(f"Ошибка при обработке раздела {section}: {str(e)}")
                 continue

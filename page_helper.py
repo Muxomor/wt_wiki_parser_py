@@ -1,8 +1,6 @@
 from typing import Optional, List
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
@@ -71,64 +69,78 @@ class PageHelper:
 
     def get_vehicle_rows(self) -> List[WebElement]:
         """
-        Возвращает все строки с информацией о технике.
-        Ищет элементы вида: <tr class="wt-ulist_unit wt-ulist_unit--regular" или wt-ulist_unit--prem ...>
+        Возвращает все строки с информацией о технике.\n
+        Ищет элементы вида: tr class=wt-ulist_unit wt-ulist_unit--regular или wt-ulist_unit--prem...\n
+        Для дальнейшего извлечения данных в методе parse_vehicle_row
         """
-        # Можно объединить селекторы, если классы различаются
         return self.driver.find_elements(By.CSS_SELECTOR, 'tr.wt-ulist_unit')
     
-    def parse_vehicle_row(self, row: WebElement) -> dict:
+    def parse_vehicle_row(self, row: WebElement, category: str) -> dict:
         """
         Извлекает данные из строки таблицы техники.
-        
+
+        :param row: WebElement строки таблицы.
+        :param category: Название раздела (например, Aviation, Helicopters и т.д.)
         :return: Словарь с ключами:
-            - link: ссылка на подробности техники (из <a href="...">)
-            - country: название страны (из data-value ячейки с классом wt-ulist_unit-country)
-            - battle_rating: значение из ячейки с классом br
-            - warpoints: число из ячейки стоимости (если отсутствует — пустая строка)
-            - rank: текст из ячейки с данными ранга
+            - data_ulist_id: значение атрибута data-ulist-id строки (если есть)\n
+            - link: ссылка на подробности техники (из a href="...")\n
+            - name: название техники (текст внутри <span> в ссылке)\n
+            - country: название страны (из data-value ячейки с классом wt-ulist_unit-country)\n
+            - battle_rating: значение из ячейки с классом br\n
+            - silver: число из ячейки стоимости (если отсутствует — пустая строка)\n
+            - rank: текст из ячейки с данными ранга\n
+            - vehicle_category: название раздела, из которого извлекается техника\n
+            - type: постоянное значение "vehicle"
         """
         data = {}
+        data['data_ulist_id'] = row.get_attribute("data-ulist-id") or ""
+
         try:
-            # Ссылка на элемент – из первой ячейки, внутри <a href="...">
-            name_cell = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a')
-            data['link'] = name_cell.get_attribute('href')
+            name_link = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a')
+            data['link'] = name_link.get_attribute('href')
         except Exception as e:
             print(f"Ошибка при получении ссылки: {str(e)}")
             data['link'] = ''
-    
+
         try:
-            # Страна – извлекаем из атрибута data-value ячейки с классом wt-ulist_unit-country
+            # Извлекаем название техники из <span> внутри ссылки
+            name_span = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a span')
+            data['name'] = name_span.text.strip()
+        except Exception as e:
+            print(f"Ошибка при получении названия: {str(e)}")
+            data['name'] = ''
+
+        try:
             country_cell = row.find_element(By.CSS_SELECTOR, 'td.wt-ulist_unit-country')
             data['country'] = country_cell.get_attribute('data-value')
         except Exception as e:
             print(f"Ошибка при получении страны: {str(e)}")
             data['country'] = ''
-    
+
         try:
-            # Battle rating – значение из ячейки с классом br
             battle_cell = row.find_element(By.CSS_SELECTOR, 'td.br')
             data['battle_rating'] = battle_cell.text.strip()
         except Exception as e:
             print(f"Ошибка при получении battle_rating: {str(e)}")
             data['battle_rating'] = ''
-    
+
+        # Извлечение silver (бывший warpoints)
         try:
-            # Warpoints – пытаемся найти ячейку, содержащую число стоимости
-            # Если значение равно "—" или отсутствует, возвращаем пустую строку
-            warpoints_cell = row.find_element(By.XPATH, ".//td[@data-value and contains(., ',')]")
-            text = warpoints_cell.text.strip()
-            data['warpoints'] = text.split()[0] if text.split() and text.split()[0] != "—" else ''
+            silver_cell = row.find_element(By.XPATH, ".//td[@data-value and contains(., ',')]")
+            text = silver_cell.text.strip()
+            data['silver'] = text.split()[0] if text.split() and text.split()[0] != "—" else ''
         except Exception as e:
-            print(f"Ошибка при получении warpoints: {str(e)}")
-            data['warpoints'] = ''
-    
+            print(f"Ошибка при получении silver: {str(e)}")
+            data['silver'] = ''
+
         try:
-            # Ранг – из ячейки с data-value, где содержится текст (например, <td data-value="2">II</td>)
-            rank_cell = row.find_element(By.XPATH, ".//td[@data-value and not(contains(., ',')) and not(contains(@class, 'br'))]")
-            data['rank'] = rank_cell.text.strip()
+            cells = row.find_elements(By.TAG_NAME, 'td')
+            data['rank'] = cells[3].text.strip() if len(cells) > 3 else ''
         except Exception as e:
             print(f"Ошибка при получении ранга: {str(e)}")
             data['rank'] = ''
-    
+
+        data['vehicle_category'] = category
+        data['type'] = 'vehicle'
+
         return data
