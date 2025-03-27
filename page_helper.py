@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.common.exceptions import NoSuchElementException
 
 class PageHelper:
     def __init__(self, driver: WebDriver, wait_timeout: int = 10) -> None:
@@ -124,14 +125,16 @@ class PageHelper:
             print(f"Ошибка при получении battle_rating: {str(e)}")
             data['battle_rating'] = ''
 
-        # Извлечение silver (бывший warpoints)
         try:
-            silver_cell = row.find_element(By.XPATH, ".//td[@data-value and contains(., ',')]")
-            text = silver_cell.text.strip()
-            data['silver'] = text.split()[0] if text.split() and text.split()[0] != "—" else ''
+            silver_td = row.find_element(By.XPATH, ".//td[@data-value and contains(., ',')]")
+            silver = silver_td.text.strip()
+        except NoSuchElementException:
+            silver = ""  # Если не найдено, присваиваем пустую строку
         except Exception as e:
-            print(f"Ошибка при получении silver: {str(e)}")
-            data['silver'] = ''
+            print(f"Ошибка при получении silver: {e}")
+            silver = ""
+
+        data["silver"] = silver
 
         try:
             cells = row.find_elements(By.TAG_NAME, 'td')

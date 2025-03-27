@@ -5,7 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
-from page_helper import PageHelper  # Импортируем класс PageHelper
+from page_helper import PageHelper
+from vehicle_get_required_exp import VehicleDataFetcher
 
 def read_config(config_path='config.txt'):
     """
@@ -122,6 +123,7 @@ def main():
                                 break
                             row = rows[idx]
                             data = helper.parse_vehicle_row(row, section)
+                            data = VehicleDataFetcher.fetch_required_exp(data)
                             print(f"Запись {idx + 1}: {data}")
                         except Exception as e:
                             print(f"Ошибка при обработке записи {idx + 1}: {str(e)}")
