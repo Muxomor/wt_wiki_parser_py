@@ -87,6 +87,7 @@ def main():
             'Aviation', 'Helicopters', 'Ground Vehicles',
             'Bluewater Fleet', 'Coastal Fleet'
         ]
+        unqiue_countryes = set()
         
         for section in target_sections:
             try:
@@ -96,6 +97,7 @@ def main():
                         (By.XPATH, f"//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='{section}']/..")
                     )
                 )
+                print(unqiue_countryes)
                 print(f"\nНачинаем обработку раздела: {section}")
                 nav_item.click()
                 print(f"Переход в раздел {section} выполнен")
@@ -125,6 +127,13 @@ def main():
                             data = helper.parse_vehicle_row(row, section)
                             data = VehicleDataFetcher.fetch_required_exp(data)
                             print(f"Запись {idx + 1}: {data}")
+                            #вытаскиваем все игровые нации
+                            row_country = data['country']
+                            if(row_country in unqiue_countryes):
+                                continue
+                            else:
+                                unqiue_countryes.add(row_country)
+
                         except Exception as e:
                             print(f"Ошибка при обработке записи {idx + 1}: {str(e)}")
                 else:
