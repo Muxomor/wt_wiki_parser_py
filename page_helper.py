@@ -76,6 +76,38 @@ class PageHelper:
         """
         return self.driver.find_elements(By.CSS_SELECTOR, 'tr.wt-ulist_unit')
     
+    def get_country_buttons(self) -> dict:
+        """
+        Ищет кнопки стран в блоке unit-filter_country-buttons и собирает данные.
+    
+        :return: Словарь {ключ_страны: ссылка_на_изображение}
+        """
+        countries = {}
+        try:
+            buttons = self.wait.until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.unit-filter_country-buttons button"))
+            )
+    
+            for button in buttons:
+                try:
+                    # Извлекаем ключ из атрибута onclick
+                    onclick_attr = button.get_attribute("onclick")
+                    country_key = onclick_attr.split("'")[1] if onclick_attr else None
+    
+                    # Ищем тег <img> внутри кнопки и берем его src
+                    img_tag = button.find_element(By.TAG_NAME, "img")
+                    img_src = img_tag.get_attribute("src")
+    
+                    if country_key and img_src:
+                        countries[country_key] = img_src
+                except Exception as e:
+                    print(f"Ошибка при обработке кнопки страны: {e}")
+    
+        except TimeoutException:
+            print("Не найден блок unit-filter_country-buttons")
+    
+        return countries    
+
     def parse_vehicle_row(self, row: WebElement, category: str) -> dict:
         """
         Извлекает данные из строки таблицы техники.
@@ -147,3 +179,4 @@ class PageHelper:
         data['type'] = 'vehicle'
 
         return data
+

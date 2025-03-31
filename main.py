@@ -61,6 +61,7 @@ def configure_driver(config):
 
 def main():
     try:
+        start_time = time.time()
         print("Чтение конфигурационного файла...")
         config = read_config()
         print("Конфиг успешно загружен:")
@@ -87,22 +88,21 @@ def main():
             'Aviation', 'Helicopters', 'Ground Vehicles',
             'Bluewater Fleet', 'Coastal Fleet'
         ]
-        unqiue_countryes = set()
+        
+        # Используем словарь для хранения уникальных стран с изображениями
+        unique_countries = {}
         
         for section in target_sections:
             try:
-                # Ищем актуальный элемент раздела по XPath
                 nav_item = helper.wait.until(
                     EC.presence_of_element_located(
                         (By.XPATH, f"//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='{section}']/..")
                     )
                 )
-                print(unqiue_countryes)
                 print(f"\nНачинаем обработку раздела: {section}")
                 nav_item.click()
                 print(f"Переход в раздел {section} выполнен")
                 
-                # Ожидаем кнопку "List" и кликаем по ней (используем JS-клик при необходимости)
                 list_button = helper.wait_for_id('wt-show-list')
                 if list_button:
                     try:
@@ -113,7 +113,6 @@ def main():
                     print("Кнопка List активирована")
                     time.sleep(1)
                     
-                    # Получаем актуальный список строк техники
                     initial_rows = helper.get_vehicle_rows()
                     total_rows = len(initial_rows)
                     print(f"Общее количество строк техники: {total_rows}")
@@ -127,13 +126,11 @@ def main():
                             data = helper.parse_vehicle_row(row, section)
                             data = VehicleDataFetcher.fetch_required_exp(data)
                             print(f"Запись {idx + 1}: {data}")
-                            #вытаскиваем все игровые нации
-                            row_country = data['country']
-                            if(row_country in unqiue_countryes):
-                                continue
-                            else:
-                                unqiue_countryes.add(row_country)
 
+                            # Добавляем уникальные страны, если их еще нет в словаре
+                            country = data.get('country')
+                            if country and country not in unique_countries:
+                                unique_countries[country] = None
                         except Exception as e:
                             print(f"Ошибка при обработке записи {idx + 1}: {str(e)}")
                 else:
@@ -143,8 +140,43 @@ def main():
             except Exception as e:
                 print(f"Ошибка при обработке раздела {section}: {str(e)}")
                 continue
+
+        print("\nВсе разделы с техникой успешно обработаны!")
+
+        # Вывод всех уникальных стран до обновления изображениями
+        print("\nСписок всех уникальных стран:")
+        print(list(unique_countries.keys()))
         
-        print("\nВсе разделы успешно обработаны!")
+        # Возвращаемся в раздел Aviation для сбора изображений флагов
+        try:
+            aviation_nav_item = helper.wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='Aviation']/..")
+                )
+            )
+            aviation_nav_item.click()
+            print("Перешли в раздел Aviation для сбора информации о странах.")
+            # Ждем появления блока с кнопками стран
+            helper.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.unit-filter_country-buttons")))
+            time.sleep(1)
+        except Exception as e:
+            print(f"Ошибка при переходе в раздел Aviation: {e}")
+        
+        print("\nСобираем информацию о странах...")
+        country_images = helper.get_country_buttons()
+        
+        # Обновляем словарь: если страна найдена, записываем ссылку на изображение
+        for country, img_url in country_images.items():
+            if country in unique_countries:
+                unique_countries[country] = img_url
+
+        print("\nОбновленный список стран с изображениями:")
+        for country, img in unique_countries.items():
+            print(f"{country}: {img}")
+
+        end_time = time.time()
+        elapse_time = end_time - start_time
+        print(f"\nСкрипт выполнился за: {elapse_time:.2f} сек. ({elapse_time / 60:.2f} мин.)")
     
     except Exception as e:
         print(f"\nКритическая ошибка: {str(e)}")
