@@ -1,15 +1,16 @@
 import os
 import time
-import csv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
+
 from page_helper import PageHelper
 from vehicle_get_required_exp import VehicleDataFetcher
 from tree_data_extractor import TreeDataExtractor
 from node_merger import NodesMerger
+from data_utils import save_to_csv, save_dependencies_to_csv, get_all_nation_tree_data
 
 def read_config(config_path='config.txt'):
     config = {}
@@ -55,28 +56,6 @@ def configure_driver(config):
     
     return webdriver.Firefox(service=service, options=options)
 
-def save_to_csv(data_list, filename="vehicles.csv"):
-    if not data_list:
-        print("Нет данных для сохранения.")
-        return
-    keys = data_list[0].keys()
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        dict_writer = csv.DictWriter(f, fieldnames=keys)
-        dict_writer.writeheader()
-        dict_writer.writerows(data_list)
-    print(f"Данные сохранены в {filename}")
-
-def save_dependencies_to_csv(dependencies, filename="dependencies.csv"):
-    if not dependencies:
-        print("Нет зависимостей для сохранения.")
-        return
-    keys = dependencies[0].keys()
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
-        writer.writeheader()
-        writer.writerows(dependencies)
-    print(f"Зависимости сохранены в {filename}")
-
 def main():
     try:
         start_time = time.time()
@@ -103,10 +82,10 @@ def main():
         
         target_sections = [
             'Aviation', 
-            'Helicopters', 
-            'Ground Vehicles',
-            'Bluewater Fleet', 
-            'Coastal Fleet'
+            #'Helicopters', 
+            #'Ground Vehicles',
+            #'Bluewater Fleet', 
+            #'Coastal Fleet'
         ]
         
         # 1. Сбор данных из List View
@@ -130,7 +109,7 @@ def main():
                         print(f"Обычный клик не сработал: {e}. Пробую JS click.")
                         driver.execute_script("arguments[0].click();", list_button)
                     print("Кнопка List активирована")
-                    time.sleep(1)
+                    #time.sleep(1)
                     
                     rows = helper.get_vehicle_rows()
                     total_rows = len(rows)
@@ -140,7 +119,6 @@ def main():
                         try:
                             data = helper.parse_vehicle_row(row, section)
                             data = VehicleDataFetcher.fetch_required_exp(data)
-                            # Преобразуем значение silver (если не пустое)
                             if data.get('silver'):
                                 data['silver'] = int(data['silver'].replace(',', '').strip())
                             vehicles_data.append(data)
@@ -149,7 +127,7 @@ def main():
                             print(f"Ошибка при обработке записи {idx}: {e}")
                 else:
                     print(f"Не удалось активировать List View для раздела {section}")
-                time.sleep(1)
+                #time.sleep(1)
             except Exception as e:
                 print(f"Ошибка при обработке раздела {section} (List View): {e}")
                 continue
@@ -164,36 +142,32 @@ def main():
         tree_view_data = []
         for section in target_sections:
             try:
+                print(f"\nПереходим в раздел (Tree View): {section}")
                 nav_item = helper.wait.until(
-                    EC.presence_of_element_located(
+                    EC.element_to_be_clickable(
                         (By.XPATH, f"//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='{section}']/..")
                     )
                 )
-                print(f"\nПереходим в раздел (Tree View): {section}")
                 nav_item.click()
-                time.sleep(1)
+                #time.sleep(2)
                 
-                tree_button = helper.wait.until(EC.element_to_be_clickable((By.ID, "wt-show-tree")))
-                tree_button.click()
-                print(f"Клик по кнопке Tree в разделе {section} выполнен")
+                # Сначала нажимаем кнопку Tree для текущего раздела
+                tree_button = helper.wait.until(EC.presence_of_element_located((By.ID, "wt-show-tree")))
+                driver.execute_script("arguments[0].click();", tree_button)
+                print("Клик по кнопке Tree выполнен")
+                #time.sleep(2)
                 
-                # Ждем появления хотя бы одного узла дерева
-                helper.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.wt-tree_item")))
-                time.sleep(1)
-                
-                # Создаем экземпляр TreeDataExtractor и извлекаем данные
-                extractor = TreeDataExtractor(helper)
-                section_tree_data = extractor.extract_nodes()
-                print(f"Извлечено {len(section_tree_data)} узлов из Tree View раздела {section}")
+                # Теперь перебираем вкладки наций для сбора данных
+                section_tree_data = get_all_nation_tree_data(helper, section)
+                print(f"Всего узлов из Tree View для раздела {section}: {len(section_tree_data)}")
                 tree_view_data.extend(section_tree_data)
             except Exception as e:
                 print(f"Ошибка при обработке раздела {section} (Tree View): {e}")
                 continue
         
-        # Сохраним данные из Tree View в CSV для проверки
         save_to_csv(tree_view_data, filename="vehicles_tree.csv")
         
-        # 3. Объединение данных List View и Tree View и формирование зависимостей
+        # 3. Объединение данных и формирование зависимостей
         merger = NodesMerger(vehicles_data, tree_view_data)
         merged_data = merger.merge_data()
         dependencies = merger.extract_node_dependencies(merged_data)
@@ -206,8 +180,15 @@ def main():
         for dep in dependencies:
             print(dep)
         
-        save_to_csv(merged_data, filename="vehicles_merged.csv")
-        save_dependencies_to_csv(dependencies, filename="dependencies.csv")
+        merged_fieldnames = [
+            "data_ulist_id", "external_id", "link", "name", "country", "battle_rating",
+            "silver", "rank", "vehicle_category", "type", "required_exp",
+            "image_url", "parent_external_id", "column_index", "row_index", "order_in_folder"
+        ]
+        dep_fieldnames = ["node_external_id", "prerequisite_external_id"]
+        
+        save_to_csv(merged_data, filename="vehicles_merged.csv", fieldnames=merged_fieldnames)
+        save_dependencies_to_csv(dependencies, filename="dependencies.csv", fieldnames=dep_fieldnames)
         
         end_time = time.time()
         elapse_time = end_time - start_time
