@@ -1,7 +1,7 @@
 base_url=http://localhost:3000/
 geckodriver_path=E:\geckodriver-v0.36.0-win32\geckodriver.exe
 firefox_binary=C:\Program Files\Mozilla Firefox\firefox.exe
-headless=true             
+headless=false             
 disable_logs=true         
-start_url=https://wiki.warthunder.com  
+start_url=https://wiki.warthunder.com
 load_images=false
