@@ -16,7 +16,7 @@ class VehicleDataFetcher:
             return vehicle_data 
         
         try:
-            #time.sleep(2)  
+            time.sleep(0.10)  
             response = requests.get(vehicle_data["link"], headers={"User-Agent": "Mozilla/5.0"})
             response.raise_for_status()
             
@@ -26,12 +26,12 @@ class VehicleDataFetcher:
             info_blocks = soup.find_all("div", class_="game-unit_card-info_item")
             for block in info_blocks:
                 title_div = block.find("div", class_="game-unit_card-info_title")
-                if title_div and "Research" in title_div.text:
+                if title_div and "Исследование" in title_div.text:
                     value_div = block.find("div", class_="game-unit_card-info_value")
                     if value_div:
                         number_div = value_div.find("div")
                         if number_div and number_div.text:
-                            required_exp = number_div.text.replace(",", "").replace(".", "").strip()
+                            required_exp = number_div.text.replace(" ", "").replace(".", "").strip()
                             vehicle_data["required_exp"] = required_exp
                             break
 

@@ -28,7 +28,7 @@ class PageHelper:
         try:
             self.wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH, "//div[contains(@class, 'block') and .//div[contains(text(), 'VEHICLES')]]")
+                    (By.XPATH, "//div[contains(@class, 'block') and .//div[contains(text(), 'ТЕХНИКА')]]")
                 )
             )
             return True
@@ -141,8 +141,8 @@ class PageHelper:
             data['battle_rating'] = ''
     
         try:
-            silver_td = row.find_element(By.XPATH, ".//td[@data-value and contains(., ',')]")
-            silver = silver_td.text.strip()
+            silver_td = row.find_element(By.XPATH, ".//td[@data-value and contains(., ' ')]")
+            silver = silver_td.text.replace(" ", "")
         except Exception as e:
             # Если не найден элемент или произошла ошибка, задаём пустую строку
             silver = ""

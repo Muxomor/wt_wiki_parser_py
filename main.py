@@ -81,11 +81,11 @@ def main():
             return
         
         target_sections = [
-            'Aviation', 
-            #'Helicopters', 
-            #'Ground Vehicles',
-            #'Bluewater Fleet', 
-            #'Coastal Fleet'
+            #'Авиация', 
+            'Вертолёты', 
+            #'Наземная техника',
+            #'Большой флот', 
+            #'Малый флот'
         ]
         
         # 1. Сбор данных из List View
@@ -138,6 +138,39 @@ def main():
         
         save_to_csv(vehicles_data, filename="vehicles_list.csv")
         
+
+        #1.1 Сбор информации о странах из страницы Авиация
+        unique_countries = {}
+        for data in vehicles_data:
+            country = data.get('country')
+            if country and country not in unique_countries:
+                unique_countries[country] = None
+        
+        print("\nВсе разделы с техникой успешно обработаны!")
+        print("\nСписок всех уникальных стран:")
+        print(list(unique_countries.keys()))
+        
+        try:
+            aviation_nav_item = helper.wait.until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='Авиация']/..")
+                )
+            )
+            aviation_nav_item.click()
+            print("Перешли в раздел Aviation для сбора информации о странах.")
+            helper.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.unit-filter_country-buttons")))
+            time.sleep(1)
+        except Exception as e:
+            print(f"Ошибка при переходе в раздел Aviation: {e}")
+        
+        print("\nСобираем информацию о странах...")
+        country_images = helper.get_country_buttons()
+        
+        from data_utils import save_country_flags_to_csv
+        save_country_flags_to_csv(country_images, filename="country_flags.csv")
+        
+
+
         # 2. Сбор данных из Tree View
         tree_view_data = []
         for section in target_sections:
