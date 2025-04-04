@@ -1,15 +1,11 @@
 import os
 import time
-import pickle
-import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium_stealth import stealth  # Импорт модуля для маскировки
-from fake_useragent import UserAgent  # Для генерации реалистичных User-Agent
+
 from page_helper import PageHelper
 from vehicle_get_required_exp import VehicleDataFetcher
 from tree_data_extractor import TreeDataExtractor
@@ -34,50 +30,31 @@ def read_config(config_path='config.txt'):
 
 def configure_driver(config):
     options = Options()
+    required = ['geckodriver_path', 'start_url']
+    for param in required:
+        if param not in config:
+            raise ValueError(f"Отсутствует обязательный параметр: {param} в config.txt")
     
-    # Настройки для обхода детекта
-    options.set_preference("dom.webdriver.enabled", False)
-    options.set_preference("useAutomationExtension", False)
-    options.set_preference("webgl.enable-debug-renderer-info", False)
-    options.set_preference("media.peerconnection.enabled", False)
-    options.set_preference("permissions.default.image", 2 if config.get('load_images', 'true').lower() == 'false' else 1)
-    
-    # Генерация случайного User-Agent
-    ua = UserAgent()
-    user_agent = ua.firefox
-    options.set_preference("general.useragent.override", user_agent)
-    
-    # Загрузка сохраненных кук
-    if os.path.exists('cookies.pkl'):
-        options.set_preference("network.cookie.cookieBehavior", 0)
-    else:
-        options.set_preference("network.cookie.cookieBehavior", 4)
-    
-    # Настройки из конфига
     if 'firefox_binary' in config and config['firefox_binary']:
         options.binary_location = config['firefox_binary']
     
-    options.headless = config.get('headless', 'false').lower() == 'true'
+    if config.get('headless', 'true').lower() == 'true':
+        options.add_argument("--headless")
+    
+    if config.get('load_images', 'true').lower() == 'false':
+        options.set_preference("permissions.default.image", 2)
+    
+    options.set_preference("dom.ipc.plugins.enabled.libflashplayer.so", False)
+    options.set_preference("browser.cache.disk.enable", False)
+    options.set_preference("browser.cache.memory.enable", False)
+    options.set_preference("network.http.use-cache", False)
     
     service = Service(
         executable_path=config['geckodriver_path'],
         log_path=os.devnull if config.get('disable_logs', 'false').lower() == 'true' else None
     )
     
-    driver = webdriver.Firefox(service=service, options=options)
-    
-    # Применяем stealth-плагин
-    stealth(
-        driver,
-        user_agent=user_agent,
-        languages=["en-US", "en"],
-        platform="Win32",
-        webgl_vendor="Intel Inc.",
-        renderer="Intel Iris OpenGL Engine",
-        fix_hairline=True,
-    )
-    
-    return driver
+    return webdriver.Firefox(service=service, options=options)
 
 def main():
     try:
@@ -93,43 +70,9 @@ def main():
         print("Драйвер успешно создан")
         
         helper = PageHelper(driver, wait_timeout=15)
-        if os.path.exists('cookies.pkl'):
-            print("\nЗагружаем сохраненные куки...")
-            driver.get(config['start_url'])
-            with open('cookies.pkl', 'rb') as file:
-                cookies = pickle.load(file)
-                for cookie in cookies:
-                    if 'sameSite' in cookie:
-                        del cookie['sameSite']  # Исправление для Firefox
-                    driver.add_cookie(cookie)
-            driver.refresh()
-        else:
-            driver.get(config['start_url'])
-        
-        if "Human Verification" in driver.title:
-            print("\n⚠️ Обнаружена проверка! Включите headful режим для первого запуска.")
-            print("1. Пройдите проверку вручную в открытом браузере")
-            print("2. После успешной проверки нажмите Enter здесь")
-            input()
-            
-            WebDriverWait(driver, 300).until(
-                EC.title_contains("War Thunder Wiki")
-            )
-            print("Капча пройдена! Сохраняем куки...")
-            with open('cookies.pkl', 'wb') as file:
-                pickle.dump(driver.get_cookies(), file)
-
-        # Динамически ждём появления контейнера с основным контентом
-        try:
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//div[contains(@class, 'block') and .//div[contains(text(), 'VEHICLES')]]")
-                )
-            )
-            print("Основной контейнер загружен.")
-        except Exception as e:
-            print("Не удалось обнаружить контейнер с VEHICLES:", e)
-
+        start_url = config['start_url']
+        print(f"\nЗагрузка стартовой страницы: {start_url}")
+        driver.get(start_url)
         print("Страница загружена")
         print(f"Заголовок страницы: {driver.title}")
         
@@ -139,7 +82,7 @@ def main():
         
         target_sections = [
             'Aviation', 
-            'Helicopters', 
+            #'Helicopters', 
             #'Ground Vehicles',
             #'Bluewater Fleet', 
             #'Coastal Fleet'
@@ -166,6 +109,7 @@ def main():
                         print(f"Обычный клик не сработал: {e}. Пробую JS click.")
                         driver.execute_script("arguments[0].click();", list_button)
                     print("Кнопка List активирована")
+                    #time.sleep(1)
                     
                     rows = helper.get_vehicle_rows()
                     total_rows = len(rows)
@@ -183,6 +127,7 @@ def main():
                             print(f"Ошибка при обработке записи {idx}: {e}")
                 else:
                     print(f"Не удалось активировать List View для раздела {section}")
+                #time.sleep(1)
             except Exception as e:
                 print(f"Ошибка при обработке раздела {section} (List View): {e}")
                 continue
@@ -192,35 +137,6 @@ def main():
             print(f"Запись {idx}: {item}")
         
         save_to_csv(vehicles_data, filename="vehicles_list.csv")
-        
-        unique_countries = {}
-        for data in vehicles_data:
-            country = data.get('country')
-            if country and country not in unique_countries:
-                unique_countries[country] = None
-        
-        print("\nВсе разделы с техникой успешно обработаны!")
-        print("\nСписок всех уникальных стран:")
-        print(list(unique_countries.keys()))
-        
-        try:
-            aviation_nav_item = helper.wait.until(
-                EC.presence_of_element_located(
-                    (By.XPATH, "//a[contains(@class, 'layout-nav_item')]//span[normalize-space(text())='Aviation']/..")
-                )
-            )
-            aviation_nav_item.click()
-            print("Перешли в раздел Aviation для сбора информации о странах.")
-            helper.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.unit-filter_country-buttons")))
-            time.sleep(1)
-        except Exception as e:
-            print(f"Ошибка при переходе в раздел Aviation: {e}")
-        
-        print("\nСобираем информацию о странах...")
-        country_images = helper.get_country_buttons()
-        
-        from data_utils import save_country_flags_to_csv
-        save_country_flags_to_csv(country_images, filename="country_flags.csv")
         
         # 2. Сбор данных из Tree View
         tree_view_data = []
@@ -233,11 +149,15 @@ def main():
                     )
                 )
                 nav_item.click()
+                #time.sleep(2)
                 
+                # Сначала нажимаем кнопку Tree для текущего раздела
                 tree_button = helper.wait.until(EC.presence_of_element_located((By.ID, "wt-show-tree")))
                 driver.execute_script("arguments[0].click();", tree_button)
                 print("Клик по кнопке Tree выполнен")
+                #time.sleep(2)
                 
+                # Теперь перебираем вкладки наций для сбора данных
                 section_tree_data = get_all_nation_tree_data(helper, section)
                 print(f"Всего узлов из Tree View для раздела {section}: {len(section_tree_data)}")
                 tree_view_data.extend(section_tree_data)
@@ -252,13 +172,13 @@ def main():
         merged_data = merger.merge_data()
         dependencies = merger.extract_node_dependencies(merged_data)
         
-        #print("\nОбъединенные данные:")
-        #for idx, item in enumerate(merged_data, 1):
-        #    print(f"Запись {idx}: {item}")
-        #
-        #print("\nИзвлеченные зависимости:")
-        #for dep in dependencies:
-        #    print(dep)
+        print("\nОбъединенные данные:")
+        for idx, item in enumerate(merged_data, 1):
+            print(f"Запись {idx}: {item}")
+        
+        print("\nИзвлеченные зависимости:")
+        for dep in dependencies:
+            print(dep)
         
         merged_fieldnames = [
             "data_ulist_id", "external_id", "link", "name", "country", "battle_rating",
