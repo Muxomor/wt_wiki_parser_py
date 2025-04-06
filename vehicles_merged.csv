@@ -1,4 +1,5 @@
 data_ulist_id,external_id,link,name,country,battle_rating,silver,rank,vehicle_category,type,required_exp,image_url,parent_external_id,column_index,row_index,order_in_folder
+ka_50,,https://wiki.warthunder.ru/unit/ka_50,Ка-50,ussr,11.3,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/ka_50.png,,0,0,
 lynx_ah_mk1,,https://wiki.warthunder.ru/unit/lynx_ah_mk1,Lynx AH.Mk.1,britain,10.7,1000000,VI,Вертолёты,vehicle,380000,https://static.encyclopedia.warthunder.com/slots/lynx_ah_mk1.png,wessex_mk5,0,0,
 ah_mk1,,https://wiki.warthunder.ru/unit/ah_mk1,AH Mk.1 Apache,britain,12.0,1020000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/ah_mk1.png,lynx_ah_mk1,0,0,
 g_lynx,,https://wiki.warthunder.ru/unit/g_lynx,G-LYNX,britain,10.7,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/g_lynx.png,,0,1,
@@ -47,13 +48,8 @@ mi_24a,,https://wiki.warthunder.ru/unit/mi_24a,Ми-24А,ussr,8.7,490000,V,Ве�
 ka_29,,https://wiki.warthunder.ru/unit/ka_29,Ка-29,ussr,9.7,1000000,VI,Вертолёты,vehicle,380000,https://static.encyclopedia.warthunder.com/slots/ka_29.png,mi_24p,2,2,
 ka_52,,https://wiki.warthunder.ru/unit/ka_52,Ка-52,ussr,12.0,1030000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/ka_52.png,ka_29,2,0,
 mi_24d,,https://wiki.warthunder.ru/unit/mi_24d,▂Ми-24Д,ussr,8.7,,V,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/mi_24d.png,,0,0,
-ka_50,,https://wiki.warthunder.ru/unit/ka_50,Ка-50,ussr,11.3,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/ka_50.png,,0,0,
 ah_64d_netherlands,,https://wiki.warthunder.ru/unit/ah_64d_netherlands,◘AH-64D,france,11.7,,VII,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/ah_64d_netherlands.png,,0,0,
-mi_4av,,https://wiki.warthunder.ru/unit/mi_4av,Ми-4АВ,ussr,8.0,390000,V,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/mi_4av.png,,1,0,
-mi_8tv,,https://wiki.warthunder.ru/unit/mi_8tv,Ми-8ТВ,ussr,8.3,490000,V,Вертолёты,vehicle,150000,https://static.encyclopedia.warthunder.com/slots/mi_8tv.png,mi_4av,0,1,
-sa_341f,,https://wiki.warthunder.ru/unit/sa_341f,SA.341F Gazelle,france,9.0,990000,VI,Вертолёты,vehicle,370000,https://static.encyclopedia.warthunder.com/slots/sa_341f.png,sa_316b,1,0,
-sa_342m,,https://wiki.warthunder.ru/unit/sa_342m,SA.342M Gazelle,france,9.7,1000000,VI,Вертолёты,vehicle,380000,https://static.encyclopedia.warthunder.com/slots/sa_342m.png,sa_341f,1,1,
-tiger_had_france,,https://wiki.warthunder.ru/unit/tiger_had_france,EC-665 Tiger HAD,france,11.0,1020000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/tiger_had_france.png,,1,0,0
+z_19e,,https://wiki.warthunder.ru/unit/z_19e,Z-19E,china,11.3,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/z_19e.png,,0,1,
 scout_ah_mk1,,https://wiki.warthunder.ru/unit/scout_ah_mk1,Scout AH.Mk.1,britain,8.3,390000,V,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/scout_ah_mk1.png,,0,0,
 wasp_has_mk1,,https://wiki.warthunder.ru/unit/wasp_has_mk1,Wasp HAS.Mk.1,britain,9.0,490000,V,Вертолёты,vehicle,150000,https://static.encyclopedia.warthunder.com/slots/wasp_has_mk1.png,scout_ah_mk1,0,1,
 wessex_mk5,,https://wiki.warthunder.ru/unit/wessex_mk5,Wessex HU Mk.5,britain,9.0,980000,V,Вертолёты,vehicle,360000,https://static.encyclopedia.warthunder.com/slots/wessex_mk5.png,wasp_has_mk1,0,2,
@@ -64,8 +60,10 @@ z_19,,https://wiki.warthunder.ru/unit/z_19,Z-19,china,11.3,1010000,VI,Верто
 z_10,,https://wiki.warthunder.ru/unit/z_10,Z-10,china,11.7,1020000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/z_10.png,z_19,0,0,
 sa_342l_china,,https://wiki.warthunder.ru/unit/sa_342l_china,SA.342L Gazelle,china,8.7,490000,V,Вертолёты,vehicle,150000,https://static.encyclopedia.warthunder.com/slots/sa_342l_china.png,z_11wa,1,1,
 oh_58d_china,,https://wiki.warthunder.ru/unit/oh_58d_china,␗OH-58D,china,10.3,1000000,VI,Вертолёты,vehicle,380000,https://static.encyclopedia.warthunder.com/slots/oh_58d_china.png,sa_342l_china,1,0,
-z_19e,,https://wiki.warthunder.ru/unit/z_19e,Z-19E,china,11.3,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/z_19e.png,,0,1,
 sa_316b,,https://wiki.warthunder.ru/unit/sa_316b,SA 316B Alouette III,france,8.3,490000,V,Вертолёты,vehicle,150000,https://static.encyclopedia.warthunder.com/slots/sa_316b.png,h_34_france,1,1,
+sa_341f,,https://wiki.warthunder.ru/unit/sa_341f,SA.341F Gazelle,france,9.0,990000,VI,Вертолёты,vehicle,370000,https://static.encyclopedia.warthunder.com/slots/sa_341f.png,sa_316b,1,0,
+sa_342m,,https://wiki.warthunder.ru/unit/sa_342m,SA.342M Gazelle,france,9.7,1000000,VI,Вертолёты,vehicle,380000,https://static.encyclopedia.warthunder.com/slots/sa_342m.png,sa_341f,1,1,
+tiger_had_france,,https://wiki.warthunder.ru/unit/tiger_had_france,EC-665 Tiger HAD,france,11.0,1020000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/tiger_had_france.png,tiger_group,1,0,0
 tiger_had_block2_france,,https://wiki.warthunder.ru/unit/tiger_had_block2_france,Tiger HAD Block 2,france,12.0,1030000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/tiger_had_block2_france.png,tiger_group,1,1,
 sa_313b_france,,https://wiki.warthunder.ru/unit/sa_313b_france,SA 313B Alouette II,france,8.3,490000,V,Вертолёты,vehicle,150000,https://static.encyclopedia.warthunder.com/slots/sa_313b_france.png,h_34_france,0,1,
 tiger_hap_france,,https://wiki.warthunder.ru/unit/tiger_hap_france,EC-665 Tiger HAP,france,10.0,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_hap_france.png,,0,0,
@@ -85,16 +83,17 @@ uh_1c,,https://wiki.warthunder.ru/unit/uh_1c,UH-1C,usa,8.7,490000,V,Вертол
 oh_58d,,https://wiki.warthunder.ru/unit/oh_58d,OH-58D,usa,10.3,1000000,VI,Вертолёты,vehicle,380000,https://static.encyclopedia.warthunder.com/slots/oh_58d.png,ah_6m,0,1,
 uh_1c_xm_30,,https://wiki.warthunder.ru/unit/uh_1c_xm_30,UH-1C XM-30,usa,8.7,,V,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/uh_1c_xm_30.png,,0,1,
 yah_64,,https://wiki.warthunder.ru/unit/yah_64,YAH-64,usa,11.3,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/yah_64.png,,0,0,
+mi_4av,,https://wiki.warthunder.ru/unit/mi_4av,Ми-4АВ,ussr,8.0,390000,V,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/mi_4av.png,,1,0,
 mi_24v,,https://wiki.warthunder.ru/unit/mi_24v,Ми-24В,ussr,9.7,980000,VI,Вертолёты,vehicle,360000,https://static.encyclopedia.warthunder.com/slots/mi_24v.png,mi_24a,1,0,
 mi_24p,,https://wiki.warthunder.ru/unit/mi_24p,Ми-24П,ussr,9.7,990000,VI,Вертолёты,vehicle,370000,https://static.encyclopedia.warthunder.com/slots/mi_24p.png,mi_24v,1,1,
 mi_35m,,https://wiki.warthunder.ru/unit/mi_35m,Ми-35М,ussr,10.7,1010000,VI,Вертолёты,vehicle,390000,https://static.encyclopedia.warthunder.com/slots/mi_35m.png,mi_24p,1,2,
 mi_28n,,https://wiki.warthunder.ru/unit/mi_28n,Ми-28Н,ussr,11.0,1020000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/mi_28n.png,mi_35m,1,0,
 mi_28nm,,https://wiki.warthunder.ru/unit/mi_28nm,Ми-28НМ,ussr,12.0,1030000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/mi_28nm.png,mi_28n,1,1,
+mi_8tv,,https://wiki.warthunder.ru/unit/mi_8tv,Ми-8ТВ,ussr,8.3,490000,V,Вертолёты,vehicle,150000,https://static.encyclopedia.warthunder.com/slots/mi_8tv.png,mi_4av,0,1,
 mi_8amtsh,,https://wiki.warthunder.ru/unit/mi_8amtsh,Ми-8АМТШ,ussr,9.7,980000,VI,Вертолёты,vehicle,360000,https://static.encyclopedia.warthunder.com/slots/mi_8amtsh.png,mi_8tv,0,1,
 super_hind_mk3,,https://wiki.warthunder.ru/unit/super_hind_mk3,Superhind,britain,10.3,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/super_hind_mk3.png,,0,0,
 mi_35m_pakistan,,https://wiki.warthunder.ru/unit/mi_35m_pakistan,▄Mi-35M,china,10.7,,VI,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/mi_35m_pakistan.png,,0,0,
 mi_8amtsh_vn,,https://wiki.warthunder.ru/unit/mi_8amtsh_vn,Ми-8АМТШ-ВН,ussr,11.0,1020000,VII,Вертолёты,vehicle,400000,https://static.encyclopedia.warthunder.com/slots/mi_8amtsh_vn.png,mi_8amtsh,0,0,
 tiger_hac_france,,https://wiki.warthunder.ru/unit/tiger_hac_france,EC-665 Tiger HAC,france,12.0,1030000,VII,Вертолёты,vehicle,200000,https://static.encyclopedia.warthunder.com/slots/tiger_hac_france.png,tiger_had_france,1,0,1
 tiger_had_spain,,https://wiki.warthunder.ru/unit/tiger_had_spain,▄Tigre HAD-E,germany,11.0,,VII,Вертолёты,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_had_spain.png,,0,0,
-tiger_group,tiger_group,,,,,,,,folder,,https://static.encyclopedia.warthunder.com/slots/tiger_group.png,sa_342m,1,0,0
-_group,_group,,,,,,,,folder,,https://static.encyclopedia.warthunder.com/slots/tiger_group.png,,1,0,1
+tiger_group,tiger_group,,,france,,,VII,Вертолёты,folder,,https://static.encyclopedia.warthunder.com/slots/tiger_group.png,sa_342m,1,0,0

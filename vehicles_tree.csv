@@ -78,7 +78,7 @@ data_ulist_id,external_id,link,name,country,battle_rating,silver,rank,vehicle_ca
 ,sa_341f,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/sa_341f.png,sa_316b,1,0,
 ,sa_342m,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/sa_342m.png,sa_341f,1,1,
 ,tiger_hap_france,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_hap_france.png,,0,0,
-,tiger_had_france,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_had_france.png,,1,0,0
+,tiger_had_france,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_had_france.png,tiger_group,1,0,0
 ,tiger_hac_france,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_hac_france.png,tiger_had_france,1,0,1
 ,tiger_had_block2_france,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/tiger_had_block2_france.png,tiger_group,1,1,
 ,ah_64d_netherlands,,,,,,,,vehicle,,https://static.encyclopedia.warthunder.com/slots/ah_64d_netherlands.png,,0,0,

@@ -10,14 +10,19 @@ class NodesMerger:
 
     def merge_data(self):
         merged_dict = {}
+        # Сначала заполняем данные из List View по ключу data_ulist_id (или external_id, если data_ulist_id отсутствует)
         for item in self.list_view_data:
             key = item.get('data_ulist_id') or item.get('external_id')
             if key:
                 merged_dict[key] = item
 
+        # Затем объединяем данные из Tree View
         for tree_node in self.tree_view_data:
             ext_id = tree_node.get('external_id')
             if not ext_id:
+                continue
+            # Если нода определена с некорректным идентификатором, пропускаем её
+            if ext_id == "_group":
                 continue
             if ext_id in merged_dict:
                 merged_dict[ext_id].update({
@@ -32,14 +37,14 @@ class NodesMerger:
             else:
                 merged_dict[ext_id] = tree_node
 
-        # Гарантируем, что каждый узел имеет ключ 'data_ulist_id'
+        # Гарантируем, что каждый узел имеет ключ data_ulist_id
         for item in merged_dict.values():
             if 'data_ulist_id' not in item or not item['data_ulist_id']:
                 item['data_ulist_id'] = item.get('external_id', '')
 
         merged_data = list(merged_dict.values())
 
-        # Для узлов типа folder, если индексы не вычислены, задаём виртуальные значения
+        # Для групповых узлов (folder) задаём виртуальные индексы, если они не вычислены
         folder_items = [item for item in merged_data if item.get('type') == 'folder']
         for idx, folder in enumerate(folder_items):
             if folder.get('row_index') is None:
@@ -48,6 +53,18 @@ class NodesMerger:
                 folder['column_index'] = idx  # присваиваем порядковый номер как column_index
             if folder.get('order_in_folder') is None:
                 folder['order_in_folder'] = idx
+
+        # Заполнение отсутствующих данных у групповых узлов на основе первого дочернего узла
+        for folder in folder_items:
+            # Ищем дочерние ноды, у которых parent_external_id совпадает с data_ulist_id групповой ноды
+            children = [n for n in merged_data if n.get('parent_external_id') == folder.get('data_ulist_id')]
+            if children:
+                if not folder.get('rank'):
+                    folder['rank'] = children[0].get('rank', '')
+                if not folder.get('country'):
+                    folder['country'] = children[0].get('country', '')
+                if not folder.get('vehicle_category'):
+                    folder['vehicle_category'] = children[0].get('vehicle_category', '')
 
         return merged_data
 

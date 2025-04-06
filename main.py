@@ -81,11 +81,11 @@ def main():
             return
         
         target_sections = [
-            #'Авиация', 
-            'Вертолёты', 
-            #'Наземная техника',
-            #'Большой флот', 
-            #'Малый флот'
+            'Авиация', 
+            #'Вертолёты', 
+            'Наземная техника',
+            'Большой флот', 
+            'Малый флот'
         ]
         
         # 1. Сбор данных из List View
@@ -226,7 +226,7 @@ def main():
         end_time = time.time()
         elapse_time = end_time - start_time
         print(f"\nСкрипт выполнился за: {elapse_time:.2f} сек. ({elapse_time / 60:.2f} мин.)")
-        
+
     except Exception as e:
         print(f"\nКритическая ошибка: {e}")
     finally:

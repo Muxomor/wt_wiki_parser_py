@@ -16,7 +16,7 @@ class VehicleDataFetcher:
             return vehicle_data 
         
         try:
-            time.sleep(0.10)  
+            #time.sleep(0.10)  
             response = requests.get(vehicle_data["link"], headers={"User-Agent": "Mozilla/5.0"})
             response.raise_for_status()
             

@@ -20,6 +20,13 @@ class PageHelper:
         self.wait_timeout = wait_timeout
         self.wait = WebDriverWait(driver, wait_timeout)
 
+    def wait_for_human_verification(self):
+        """
+        Если заголовок страницы равен 'Human Verification', ждем, пока пользователь не пройдет проверку.
+        """
+        while self.driver.title.strip().lower() == "human verification":
+            input("Страница требует прохождения Human Verification. Пройдите проверку и нажмите Enter для продолжения...")
+
     def wait_for_container(self) -> bool:
         """
         Ожидает появления контейнера с навигационными элементами.

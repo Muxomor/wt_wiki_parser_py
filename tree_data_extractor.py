@@ -19,13 +19,16 @@ class TreeDataExtractor:
     def extract_vehicle_node(self, element):
         node = {}
         node['external_id'] = element.get_attribute("data-unit-id")
-        node['parent_external_id'] = element.get_attribute("data-unit-req")
+        # Сначала пробуем взять родительский идентификатор из data-unit-req
+        node['parent_external_id'] = element.get_attribute("data-unit-req") or ""
+        
         try:
             name_elem = element.find_element(By.CSS_SELECTOR, ".wt-tree_item-text span")
             node['name'] = name_elem.text.strip()
         except Exception as e:
             node['name'] = ""
             print(f"Ошибка при получении названия для {node.get('external_id')}: {e}")
+        
         try:
             icon_elem = element.find_element(By.CLASS_NAME, "wt-tree_item-icon")
             style = icon_elem.get_attribute("style")
@@ -33,9 +36,11 @@ class TreeDataExtractor:
         except Exception as e:
             node['image_url'] = ""
             print(f"Ошибка при получении image_url для {node.get('external_id')}: {e}")
+        
         classes = element.get_attribute("class")
         node['tech_category'] = "premium" if "wt-tree_item--prem" in classes else "standard"
         node['type'] = "vehicle"
+        
         try:
             td = element.find_element(By.XPATH, "./ancestor::td[1]")
             tr = td.find_element(By.XPATH, "./ancestor::tr[1]")
@@ -48,12 +53,25 @@ class TreeDataExtractor:
             node['column_index'] = None
             node['row_index'] = None
             print(f"Ошибка при определении индексов для {node.get('external_id')}: {e}")
+        
         try:
             parent_container = element.find_element(By.XPATH, "./ancestor::div[contains(@class, 'wt-tree_group-items')]")
             children = parent_container.find_elements(By.CSS_SELECTOR, "div.wt-tree_item")
             node['order_in_folder'] = children.index(element)
         except Exception as e:
             node['order_in_folder'] = None
+    
+        # Если у элемента есть order_in_folder (т.е. он внутри группы) и родительский идентификатор отсутствует,
+        # ищем ближайший родительский элемент с классом wt-tree_group и берем его data-unit-id
+        if node.get('order_in_folder') is not None and not node['parent_external_id']:
+            try:
+                parent_group = element.find_element(By.XPATH, "./ancestor::div[contains(@class, 'wt-tree_group')]")
+                if parent_group:
+                    parent_id = parent_group.get_attribute("data-unit-id")
+                    node['parent_external_id'] = parent_id or ""
+            except Exception as e:
+                print(f"Не удалось определить родительскую группу для {node.get('external_id')}: {e}")
+        
         return node
 
     def extract_folder_node(self, folder_element):
