@@ -5,7 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
-
+from rank_requirements_extractor import run_rank_requirements_extraction
 from page_helper import PageHelper
 from vehicle_get_required_exp import VehicleDataFetcher
 from tree_data_extractor import TreeDataExtractor
@@ -82,7 +82,7 @@ def main():
         
         target_sections = [
             'Авиация', 
-            #'Вертолёты', 
+            'Вертолёты', 
             'Наземная техника',
             'Большой флот', 
             'Малый флот'
@@ -223,6 +223,10 @@ def main():
         save_to_csv(merged_data, filename="vehicles_merged.csv", fieldnames=merged_fieldnames)
         save_dependencies_to_csv(dependencies, filename="dependencies.csv", fieldnames=dep_fieldnames)
         
+        # 4. Извлечение требований для открытия следующей эры
+        print("\nИзвлекаем требования для открытия следующей эры для наций...")
+        run_rank_requirements_extraction()
+
         end_time = time.time()
         elapse_time = end_time - start_time
         print(f"\nСкрипт выполнился за: {elapse_time:.2f} сек. ({elapse_time / 60:.2f} мин.)")
