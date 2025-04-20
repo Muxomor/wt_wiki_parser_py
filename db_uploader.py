@@ -27,9 +27,11 @@ def upload_all_data(config,
         print(f"  Таблица {tbl} очищена")
 
     # 1) vehicle_types
+    print("заливаю vehicle_types")
     client.upsert_vehicle_types(target_sections)
 
     # 2) nations
+    print("заливаю nations")
     nations_payload = []
     with open(country_csv, encoding='utf-8') as f:
         for row in csv.DictReader(f):
@@ -49,6 +51,7 @@ def upload_all_data(config,
 
     # Формируем список узлов без tech_category и с преобразованным rank
     nodes_payload = []
+    print("заливаю nodes")
     for nd in merged_data:
         # Пропустим записи без rank
         rank_str = nd.get('rank') or ''
@@ -88,7 +91,6 @@ def upload_all_data(config,
             'column_index':    nd.get('column_index') or None,
             'row_index':       nd.get('row_index') or None,
             'order_in_folder': nd.get('order_in_folder') or None,
-            # tech_category убрали — база подставит 'standard' по умолчанию
         })
 
     client.insert_nodes(nodes_payload)

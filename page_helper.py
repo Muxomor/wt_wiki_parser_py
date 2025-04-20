@@ -115,60 +115,48 @@ class PageHelper:
     
         return countries    
 
-    def parse_vehicle_row(self, row: WebElement, category: str) -> dict:
+    def parse_vehicle_row(self, row: WebElement, category: str) -> Optional[dict]:
         data = {}
         data['data_ulist_id'] = row.get_attribute("data-ulist-id") or ""
-    
         try:
             name_link = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a')
             data['link'] = name_link.get_attribute('href')
-        except Exception as e:
-            print(f"Ошибка при получении ссылки: {str(e)}")
+        except:
             data['link'] = ''
-    
         try:
-            name_span = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a span')
-            data['name'] = name_span.text.strip()
-        except Exception as e:
-            print(f"Ошибка при получении названия: {str(e)}")
+            data['name'] = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a span').text.strip()
+        except:
             data['name'] = ''
-    
         try:
             country_cell = row.find_element(By.CSS_SELECTOR, 'td.wt-ulist_unit-country')
             data['country'] = country_cell.get_attribute('data-value')
-        except Exception as e:
-            print(f"Ошибка при получении страны: {str(e)}")
+        except:
             data['country'] = ''
-    
         try:
-            battle_cell = row.find_element(By.CSS_SELECTOR, 'td.br')
-            data['battle_rating'] = battle_cell.text.strip()
-        except Exception as e:
-            print(f"Ошибка при получении battle_rating: {str(e)}")
+            data['battle_rating'] = row.find_element(By.CSS_SELECTOR, 'td.br').text.strip()
+        except:
             data['battle_rating'] = ''
-    
+        # серебро берётся из ячейки с data-value и пробелом
         try:
             silver_td = row.find_element(By.XPATH, ".//td[@data-value and contains(., ' ')]")
             silver = silver_td.text.replace(" ", "")
-        except Exception as e:
-            # Если не найден элемент или произошла ошибка, задаём пустую строку
+        except:
             silver = ""
-    
-        # Если элемент содержит классы -prem или -squad, принудительно обнуляем silver
-        row_class = row.get_attribute("class") or ""
-        if "--prem" in row_class or "--squad" in row_class:
+        # для премиума/полка сбрасываем серебро
+        classes = row.get_attribute("class") or ""
+        if "--prem" in classes or "--squad" in classes:
             silver = ""
-    
         data["silver"] = silver
-    
         try:
             cells = row.find_elements(By.TAG_NAME, 'td')
             data['rank'] = cells[3].text.strip() if len(cells) > 3 else ''
-        except Exception as e:
-            print(f"Ошибка при получении ранга: {str(e)}")
+        except:
             data['rank'] = ''
-    
         data['vehicle_category'] = category
         data['type'] = 'vehicle'
-    
+
+        # --- фильтрация скрытых юнитов без BR и без серебра ---
+        if not data.get('battle_rating') or data['battle_rating'] == '—':
+            return None
+
         return data

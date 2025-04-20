@@ -60,7 +60,7 @@ class TreeDataExtractor:
             node['order_in_folder'] = children.index(element)
         except Exception as e:
             node['order_in_folder'] = None
-    
+        
         # Если у элемента есть order_in_folder (т.е. он внутри группы) и родительский идентификатор отсутствует,
         # ищем ближайший родительский элемент с классом wt-tree_group и берем его data-unit-id
         if node.get('order_in_folder') is not None and not node['parent_external_id']:
@@ -76,18 +76,16 @@ class TreeDataExtractor:
 
     def extract_folder_node(self, folder_element):
         node = {}
-        ext_id = folder_element.get_attribute("data-unit-id")
-        try:
-            name_elem = folder_element.find_element(By.CSS_SELECTOR, ".wt-tree_group-folder_inner .wt-tree_item-text span")
-            name = name_elem.text.strip()
-        except Exception as e:
-            name = ""
-            print(f"Ошибка при получении названия папки: {e}")
-        # Если отсутствует data-unit-id, создаем его на основе названия
-        if not ext_id:
-            ext_id = name.lower().replace(" ", "_") + "_group"
+        # всегда используем data‑unit‑id из HTML — если вдруг его нет, то только тогда фолбэк по name
+        name_elem = folder_element.find_element(
+            By.CSS_SELECTOR, 
+            ".wt-tree_group-folder_inner .wt-tree_item-text span"
+        )
+        name = name_elem.text.strip()
+        ext_id = folder_element.get_attribute("data-unit-id") or (name.lower().replace(" ", "_") + "_group")
+
         node['external_id'] = ext_id
-        node['parent_external_id'] = folder_element.get_attribute("data-unit-req")
+        node['parent_external_id'] = folder_element.get_attribute("data-unit-req") or ""
         node['type'] = "folder"
         node['name'] = name
         try:
@@ -98,6 +96,7 @@ class TreeDataExtractor:
             node['image_url'] = ""
             print(f"Ошибка при получении image_url для папки {ext_id}: {e}")
         node['tech_category'] = "standard"
+
         # Попытка вычислить индексы через таблицу
         try:
             tbody = folder_element.find_element(By.XPATH, "./ancestor::tbody[1]")
@@ -108,10 +107,9 @@ class TreeDataExtractor:
             td = folder_element.find_element(By.XPATH, "./ancestor::td[1]")
             node['column_index'] = tds.index(td)
         except Exception as e:
-            # Если не удалось, определим индексы по порядку среди всех групповых узлов
             try:
-                all_folders = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_group, div.wt-tree_group-folder")
-                node['row_index'] = 0  # Поскольку группы могут не иметь строковой организации, зададим 0
+                all_folders = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_group[data-unit-id]")
+                node['row_index'] = 0
                 node['column_index'] = all_folders.index(folder_element)
             except Exception as ex:
                 node['row_index'] = None
@@ -119,16 +117,18 @@ class TreeDataExtractor:
                 print(f"Не удалось вычислить индексы для группового узла {ext_id}: {ex}")
         try:
             # Порядок среди групповых узлов
-            all_folders = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_group, div.wt-tree_group-folder")
+            all_folders = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_group[data-unit-id]")
             node['order_in_folder'] = all_folders.index(folder_element)
         except Exception as e:
             node['order_in_folder'] = None
             print(f"Не удалось определить порядок для группового узла {ext_id}: {e}")
+
         print(f"Извлечена группа: external_id={node.get('external_id')}, name={node.get('name')}, row_index={node.get('row_index')}, column_index={node.get('column_index')}, order_in_folder={node.get('order_in_folder')}")
         return node
 
     def extract_nodes(self):
         nodes = []
+        # Сначала собираем все отдельные элементы техники
         vehicle_elements = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_item")
         for elem in vehicle_elements:
             try:
@@ -136,7 +136,12 @@ class TreeDataExtractor:
                 nodes.append(node)
             except Exception as e:
                 print(f"Ошибка при обработке vehicle узла: {e}")
-        folder_elements = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_group, div.wt-tree_group-folder")
+
+        # Забираем ТОЛЬКО внешние контейнеры групп (те, у которых есть data-unit-id)
+        folder_elements = self.driver.find_elements(
+            By.CSS_SELECTOR,
+            "div.wt-tree_group[data-unit-id]"
+        )
         for folder in folder_elements:
             try:
                 node = self.extract_folder_node(folder)

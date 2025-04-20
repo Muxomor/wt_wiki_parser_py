@@ -119,6 +119,8 @@ def main():
                     for idx, row in enumerate(rows, start=1):
                         try:
                             data = helper.parse_vehicle_row(row, section)
+                            if data is None:
+                                continue
                             data = VehicleDataFetcher.fetch_required_exp(data)
                             if data.get('silver'):
                                 data['silver'] = int(data['silver'].replace(',', '').strip())
@@ -249,20 +251,20 @@ def main():
             print("Браузер закрыт")
 
 if __name__ == "__main__":
-    main()
-    #config = read_config()
-    #target_sections = [
-    #        'Авиация', 
-    #        'Вертолёты', 
-    #        'Наземная техника',
-    #        'Большой флот', 
-    #        'Малый флот'
-    #    ]
-    #upload_all_data(
-    #        config=config,
-    #        target_sections=target_sections,
-    #        country_csv="country_flags.csv",
-    #        merged_csv="vehicles_merged.csv",
-    #        deps_csv="dependencies.csv",
-    #        rank_csv="rank_requirements.csv"
-    #    )
+    #main()
+    config = read_config()
+    target_sections = [
+            'Авиация', 
+            'Вертолёты', 
+            'Наземная техника',
+            'Большой флот', 
+            'Малый флот'
+        ]
+    upload_all_data(
+            config=config,
+            target_sections=target_sections,
+            country_csv="country_flags.csv",
+            merged_csv="vehicles_merged.csv",
+            deps_csv="dependencies.csv",
+            rank_csv="rank_requirements.csv"
+        )
