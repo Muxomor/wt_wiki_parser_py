@@ -11,6 +11,7 @@ from vehicle_get_required_exp import VehicleDataFetcher
 from tree_data_extractor import TreeDataExtractor
 from node_merger import NodesMerger
 from data_utils import save_to_csv, save_dependencies_to_csv, get_all_nation_tree_data
+from db_uploader import upload_all_data
 
 def read_config(config_path='config.txt'):
     config = {}
@@ -184,13 +185,11 @@ def main():
                 nav_item.click()
                 #time.sleep(2)
                 
-                # Сначала нажимаем кнопку Tree для текущего раздела
                 tree_button = helper.wait.until(EC.presence_of_element_located((By.ID, "wt-show-tree")))
                 driver.execute_script("arguments[0].click();", tree_button)
                 print("Клик по кнопке Tree выполнен")
                 #time.sleep(2)
                 
-                # Теперь перебираем вкладки наций для сбора данных
                 section_tree_data = get_all_nation_tree_data(helper, section)
                 print(f"Всего узлов из Tree View для раздела {section}: {len(section_tree_data)}")
                 tree_view_data.extend(section_tree_data)
@@ -227,6 +226,17 @@ def main():
         print("\nИзвлекаем требования для открытия следующей эры для наций...")
         run_rank_requirements_extraction()
 
+        #5. Вставка извлеченных данных в БД
+        #print("\nЗаливаем данные в БД")
+        #upload_all_data(
+        #    config=config,
+        #    target_sections=target_sections,
+        #    country_csv="country_flags.csv",
+        #    merged_csv="vehicles_merged.csv",
+        #    deps_csv="dependencies.csv",
+        #    rank_csv="rank_requirements.csv"
+        #)
+
         end_time = time.time()
         elapse_time = end_time - start_time
         print(f"\nСкрипт выполнился за: {elapse_time:.2f} сек. ({elapse_time / 60:.2f} мин.)")
@@ -240,3 +250,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+    #config = read_config()
+    #target_sections = [
+    #        'Авиация', 
+    #        'Вертолёты', 
+    #        'Наземная техника',
+    #        'Большой флот', 
+    #        'Малый флот'
+    #    ]
+    #upload_all_data(
+    #        config=config,
+    #        target_sections=target_sections,
+    #        country_csv="country_flags.csv",
+    #        merged_csv="vehicles_merged.csv",
+    #        deps_csv="dependencies.csv",
+    #        rank_csv="rank_requirements.csv"
+    #    )
