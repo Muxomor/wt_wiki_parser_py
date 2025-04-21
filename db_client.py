@@ -4,37 +4,23 @@ import requests
 
 class PostgrestClient:
     def __init__(self, base_url):
-        """
-        Создаёт сессию requests с trust_env=False,
-        чтобы игнорировать переменные HTTP_PROXY/SOCKS_PROXY.
-        """
         self.base = base_url.rstrip('/')
         self.session = requests.Session()
-        self.session.trust_env = False 
+        self.session.trust_env = False
         self.session.headers.update({
             'Content-Type': 'application/json'
         })
 
     def delete_all(self, table):
-        """
-        Удалить все строки из таблицы table.
-        DELETE /<table> без фильтрации = удаляет всё.
-        """
         url = f"{self.base}/{table}"
-        resp = self.session.delete(url)
-        resp.raise_for_status()
-        return resp.status_code
+        r = self.session.delete(url)
+        r.raise_for_status()
+        return r.status_code
 
     def _post(self, path, data):
-        """
-        Делает POST и спокойно обрабатывает пустые ответы.
-        """
         url = f"{self.base}/{path}"
         r = self.session.post(url, json=data)
         r.raise_for_status()
-    
-        # Если тело непустое — пытаемся его распарсить как JSON,
-        # иначе — возвращаем просто статус-код или сам response.
         if r.text:
             try:
                 return r.json()
@@ -50,26 +36,28 @@ class PostgrestClient:
 
     def _patch(self, path, data):
         url = f"{self.base}/{path}"
-
         r = self.session.patch(url, json=data)
         r.raise_for_status()
-        return r.json()
+        # Обрабатываем так же, как в _post:
+        if r.text:
+            try:
+                return r.json()
+            except ValueError:
+                return r.status_code
+        return r.status_code
 
-    # -------- Справочники --------
+    # Справочники
     def upsert_vehicle_types(self, names):
-        payload = [{'name': n} for n in names]
-        return self._post('vehicle_types', payload)
+        return self._post('vehicle_types', [{'name': n} for n in names])
 
     def upsert_nations(self, nations):
-        # nations: list of {'name':..., 'image_url':...}
         return self._post('nations', nations)
 
     def fetch_map(self, table, key_field='name'):
-        # GET /<table>?select=id,<key_field>
         data = self._get(table, params={'select': f"id,{key_field}"})
         return {rec[key_field]: rec['id'] for rec in data}
 
-    # -------- Основные вставки --------
+    # Основные вставки
     def insert_nodes(self, nodes_payload):
         return self._post('nodes', nodes_payload)
 

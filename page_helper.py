@@ -119,8 +119,8 @@ class PageHelper:
         data = {}
         data['data_ulist_id'] = row.get_attribute("data-ulist-id") or ""
         try:
-            name_link = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a')
-            data['link'] = name_link.get_attribute('href')
+            link_el = row.find_element(By.CSS_SELECTOR, '.wt-ulist_unit-name a')
+            data['link'] = link_el.get_attribute('href')
         except:
             data['link'] = ''
         try:
@@ -128,34 +128,44 @@ class PageHelper:
         except:
             data['name'] = ''
         try:
-            country_cell = row.find_element(By.CSS_SELECTOR, 'td.wt-ulist_unit-country')
-            data['country'] = country_cell.get_attribute('data-value')
+            country_el = row.find_element(By.CSS_SELECTOR, 'td.wt-ulist_unit-country')
+            data['country'] = country_el.get_attribute('data-value')
         except:
             data['country'] = ''
         try:
             data['battle_rating'] = row.find_element(By.CSS_SELECTOR, 'td.br').text.strip()
         except:
             data['battle_rating'] = ''
-        # серебро берётся из ячейки с data-value и пробелом
-        try:
-            silver_td = row.find_element(By.XPATH, ".//td[@data-value and contains(., ' ')]")
-            silver = silver_td.text.replace(" ", "")
-        except:
+        
+        # --- обработка серебра: числа, «—» или «Бесплатно» ---
+        cells = row.find_elements(By.TAG_NAME, 'td')
+        if len(cells) >= 6:
+            raw = cells[5].text.strip().lower()
+            if raw == "бесплатно":
+                silver = "0"
+            elif raw == "—" or raw == "":
+                silver = ""
+            else:
+                # убираем пробелы тысячных разделителей
+                silver = raw.replace(" ", "")
+        else:
             silver = ""
-        # для премиума/полка сбрасываем серебро
+
+        # сбрасываем серебро для премиума/полка
         classes = row.get_attribute("class") or ""
         if "--prem" in classes or "--squad" in classes:
             silver = ""
+
         data["silver"] = silver
+
         try:
-            cells = row.find_elements(By.TAG_NAME, 'td')
             data['rank'] = cells[3].text.strip() if len(cells) > 3 else ''
         except:
             data['rank'] = ''
         data['vehicle_category'] = category
         data['type'] = 'vehicle'
 
-        # --- фильтрация скрытых юнитов без BR и без серебра ---
+        # скрытые юниты (без BR или silver) пропускаем
         if not data.get('battle_rating') or data['battle_rating'] == '—':
             return None
 

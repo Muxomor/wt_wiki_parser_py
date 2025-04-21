@@ -120,8 +120,11 @@ def main():
                         try:
                             data = helper.parse_vehicle_row(row, section)
                             if data is None:
+                                # скрытая техника без BR — пропускаем
                                 continue
-                            data = VehicleDataFetcher.fetch_required_exp(data)
+                            # если серебро > 0, получаем required_exp, иначе пропускаем
+                            if data.get('silver') and int(data['silver']) > 0:
+                                data = VehicleDataFetcher.fetch_required_exp(data)
                             if data.get('silver'):
                                 data['silver'] = int(data['silver'].replace(',', '').strip())
                             vehicles_data.append(data)
