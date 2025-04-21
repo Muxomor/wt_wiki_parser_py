@@ -28,12 +28,12 @@ def upload_all_data(config,
                     rank_csv="rank_requirements.csv"):
     """
     Полная заливка данных через PostgREST:
-      1) (опционально) чистка таблиц
+      1) Очистка (опционально)
       2) upsert vehicle_types
       3) upsert nations
-      4) fetch_map для справочников
-      5) build nodes_payload с правильными tech_category, silver_cost, required_exp
-      6) bulk insert nodes (по одной записи для отладки)
+      4) fetch_map для vehicle_types и nations
+      5) build nodes_payload с корректной tech_category для папок
+      6) по‑шаговая вставка nodes
       7) обновление parent_id
       8) insert node_dependencies
       9) insert rank_requirements
@@ -43,7 +43,7 @@ def upload_all_data(config,
         raise ValueError("В config.txt не указан base_url для PostgREST")
     client = PostgrestClient(base_url)
 
-    # 1) (опционально) очистить таблицы перед заливкой
+    # 1) очистка всех таблиц
     for tbl in ('node_dependencies','rank_requirements','nodes','nations','vehicle_types'):
         client.delete_all(tbl)
 
@@ -92,24 +92,30 @@ def upload_all_data(config,
         except ValueError:
             rank_int = roman_to_int(r)
 
-        # silver_cost и required_exp
-        silver_raw = nd.get('silver') or None
-        exp_raw    = nd.get('required_exp') or None
-        silver = int(silver_raw) if silver_raw is not None else None
-        required_exp = int(exp_raw) if exp_raw is not None else None
-
-        # tech_category logic: any silver → standard (если нет exp, то 0), иначе premium
-        if silver is not None:
+        # --- Новая логика для folder-узлов: ---
+        if nd.get('type') == 'folder':
             tech_category = 'standard'
-            if required_exp is None:
-                required_exp = 0
+            silver_cost   = 0
+            required_exp  = 0
         else:
-            tech_category = 'premium'
-            required_exp = None
+            # silver_cost и required_exp для обычных юнитов
+            silver_raw   = nd.get('silver') or None
+            exp_raw      = nd.get('required_exp') or None
+            silver_cost  = int(silver_raw) if silver_raw is not None else None
+            required_exp = int(exp_raw)    if exp_raw    is not None else None
 
+            # tech_category logic
+            if silver_cost is not None:
+                tech_category = 'standard'
+                if required_exp is None:
+                    required_exp = 0
+            else:
+                tech_category = 'premium'
+                required_exp = None
+
+        # парсим battle_rating
         br_raw = nd.get('battle_rating') or None
         if br_raw:
-            # приводим запятую к точке, затем к float
             try:
                 br = float(br_raw.replace(',', '.'))
             except ValueError:
@@ -124,12 +130,11 @@ def upload_all_data(config,
             'tech_category':   tech_category,
             'nation_id':       nat_map[country_key],
             'vehicle_type_id': vt_map[vt_key],
-            'parent_id':       None,           # или дочерней логикой
             'rank':            rank_int,
-            'silver_cost':     silver,
+            'silver_cost':     silver_cost,
             'required_exp':    required_exp,
             'image_url':       nd.get('image_url') or None,
-            'br':              br,             # <— добавили сюда
+            'br':              br,
             'column_index':    nd.get('column_index') or None,
             'row_index':       nd.get('row_index') or None,
             'order_in_folder': nd.get('order_in_folder') or None,
@@ -152,8 +157,9 @@ def upload_all_data(config,
     print("\n=== Обновление parent_id ===")
     node_map = client.fetch_map('nodes', key_field='external_id')
     for nd in merged_data:
-        ext = (nd.get('data_ulist_id') or '').strip()
+        ext    = (nd.get('data_ulist_id') or '').strip()
         parent = (nd.get('parent_external_id') or '').strip()
+        print(f"обновляю {ext}, parent_id - {parent}")
         if ext in node_map and parent in node_map:
             client._patch(f"nodes?external_id=eq.{ext}",
                           {'parent_id': node_map[parent]})
@@ -169,7 +175,7 @@ def upload_all_data(config,
                 'prerequisite_node_id': node_map[row['prerequisite_external_id']]
             })
     client.insert_node_dependencies(deps)
-    print("node_dependencies загружены")
+    print(f"node dependecies : {deps}")
 
     # 9) rank_requirements
     print("\n=== Загрузка rank_requirements ===")
@@ -184,6 +190,6 @@ def upload_all_data(config,
                 'required_units':   int(row['required_units']),
             })
     client.insert_rank_requirements(rr)
-    print("rank_requirements загружены")
+    print(f" rank_requirements : {rr}")
 
     print("\n✔ Всё успешно загружено через PostgREST")

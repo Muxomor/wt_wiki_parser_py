@@ -232,15 +232,15 @@ def main():
         run_rank_requirements_extraction()
 
         #5. Вставка извлеченных данных в БД
-        #print("\nЗаливаем данные в БД")
-        #upload_all_data(
-        #    config=config,
-        #    target_sections=target_sections,
-        #    country_csv="country_flags.csv",
-        #    merged_csv="vehicles_merged.csv",
-        #    deps_csv="dependencies.csv",
-        #    rank_csv="rank_requirements.csv"
-        #)
+        print("\nЗаливаем данные в БД")
+        upload_all_data(
+            config=config,
+            target_sections=target_sections,
+            country_csv="country_flags.csv",
+            merged_csv="vehicles_merged.csv",
+            deps_csv="dependencies.csv",
+            rank_csv="rank_requirements.csv"
+        )
 
         end_time = time.time()
         elapse_time = end_time - start_time
