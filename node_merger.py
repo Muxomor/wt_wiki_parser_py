@@ -1,247 +1,241 @@
-import logging # Добавим импорт logging для возможного вывода предупреждений
+# import logging # Убрано
+import pprint # Для красивого вывода словарей при отладке
 
-# Настройка базового логирования (опционально, но полезно для отладки)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Убрана настройка logging
 
 class NodesMerger:
     """
-    Объединяет данные узлов из двух различных представлений (List View и Tree View) в единую структуру.
-
-    Этот класс принимает два списка словарей, представляющих данные узлов, и выполняет слияние
-    на основе идентификаторов ('data_ulist_id' или 'external_id'). Он также обрабатывает
-    иерархические связи ('parent_external_id') и заполняет недостающие атрибуты
-    в групповых узлах ('folder') на основе данных их дочерних узлов.
-
-    Атрибуты:
-        list_view_data (list): Список словарей из List View. Ожидается наличие ключа 'data_ulist_id' или 'external_id'.
-        tree_view_data (list): Список словарей из Tree View. Ожидается наличие ключа 'external_id',
-                               а также могут присутствовать 'parent_external_id', данные о позиционировании
-                               ('column_index', 'row_index', 'order_in_folder'), 'image_url', 'type', 'tech_category'.
+    Объединяет данные узлов из List View и Tree View.
     """
     def __init__(self, list_view_data, tree_view_data):
         """
-        Инициализирует NodesMerger с данными из List View и Tree View.
-
-        :param list_view_data: Список словарей из List View.
-        :param tree_view_data: Список словарей из Tree View.
+        Инициализирует NodesMerger.
         """
         self.list_view_data = list_view_data if list_view_data is not None else []
         self.tree_view_data = tree_view_data if tree_view_data is not None else []
-        logging.info(f"Инициализация NodesMerger с {len(self.list_view_data)} элементами List View и {len(self.tree_view_data)} элементами Tree View.")
+        print(f"Инициализация NodesMerger с {len(self.list_view_data)} элементами List View и {len(self.tree_view_data)} элементами Tree View.")
+
+    def _get_definitive_id(self, node):
+         """Возвращает приоритетный ID узла (data_ulist_id или external_id)."""
+         return node.get('data_ulist_id') or node.get('external_id')
 
     def merge_data(self):
         """
-        Выполняет слияние данных из list_view_data и tree_view_data.
-
-        Процесс слияния:
-        1. Создает словарь merged_dict, используя 'data_ulist_id' (или 'external_id') из list_view_data в качестве ключей.
-        2. Обновляет/дополняет записи в merged_dict данными из tree_view_data, сопоставляя по 'external_id'.
-           - Пропускает узлы с некорректным external_id ('_group').
-           - Обновляет поля: 'image_url', 'parent_external_id', 'column_index', 'row_index', 'order_in_folder', 'type', 'tech_category'.
-           - Устанавливает значения по умолчанию для 'type' ('vehicle') и 'tech_category' ('standard'), если они отсутствуют.
-        3. Гарантирует, что каждый узел в merged_dict имеет ключ 'data_ulist_id', используя 'external_id', если необходимо.
-        4. Преобразует merged_dict обратно в список merged_data.
-        5. Обрабатывает групповые узлы ('folder'):
-           - Устанавливает виртуальные 'row_index', 'column_index', 'order_in_folder', если они отсутствуют.
-           - Заполняет отсутствующие 'rank', 'country', 'vehicle_category' у папок на основе данных дочерних узлов.
-             - 'rank' берется из первого дочернего узла, у которого 'order_in_folder' не None и >= 0.
-             - 'country' и 'vehicle_category' берутся из первого найденного дочернего узла.
-
-        :return: Список словарей с объединенными и обработанными данными узлов.
-        :rtype: list[dict]
+        Выполняет слияние данных list_view_data и tree_view_data.
         """
-        merged_dict = {}
+        merged_dict_by_id = {} # Используем ID как ключ
+
         # 1. Заполнение из List View
+        processed_list_view_count = 0
+        skipped_list_view_no_id = 0
         for item in self.list_view_data:
-            key = item.get('data_ulist_id') or item.get('external_id')
+            key = self._get_definitive_id(item)
             if key:
-                merged_dict[key] = item
+                # Добавляем недостающие поля из tree view как None по умолчанию
+                item.setdefault('image_url', None)
+                item.setdefault('parent_external_id', None)
+                item.setdefault('column_index', None)
+                item.setdefault('row_index', None)
+                item.setdefault('order_in_folder', None)
+                item.setdefault('type', 'vehicle') # По умолчанию из list view - техника
+                item.setdefault('tech_category', 'standard') # По умолчанию стандартная
+                merged_dict_by_id[key] = item
+                processed_list_view_count += 1
             else:
-                logging.warning(f"Элемент в list_view_data пропущен из-за отсутствия 'data_ulist_id' и 'external_id': {item}")
+                skipped_list_view_no_id += 1
+                # print(f"Предупреждение: Элемент в list_view_data пропущен из-за отсутствия ID: {item.get('name')}")
+        print(f"Обработано из List View: {processed_list_view_count} (пропущено без ID: {skipped_list_view_no_id})")
 
 
         # 2. Объединение с данными из Tree View
+        updated_count = 0
+        added_count = 0
+        skipped_tree_view_no_id = 0
         for tree_node in self.tree_view_data:
-            ext_id = tree_node.get('external_id')
-            if not ext_id:
-                logging.warning(f"Узел в tree_view_data пропущен из-за отсутствия 'external_id': {tree_node}")
-                continue
-            # Пропускаем узлы с некорректным идентификатором
-            if ext_id == "_group":
-                logging.info(f"Узел с external_id='_group' пропущен: {tree_node}")
+            key = self._get_definitive_id(tree_node)
+            if not key:
+                skipped_tree_view_no_id += 1
+                # print(f"Предупреждение: Узел в tree_view_data пропущен из-за отсутствия ID: {tree_node.get('name')}")
                 continue
 
-            if ext_id in merged_dict:
-                # Обновляем существующую запись
-                merged_node = merged_dict[ext_id]
-                merged_node.update({
-                    # Обновляем image_url, только если он есть в tree_node, иначе оставляем существующий
-                    'image_url': tree_node.get('image_url', merged_node.get('image_url', '')),
-                    'parent_external_id': tree_node.get('parent_external_id'),
-                    'column_index': tree_node.get('column_index'),
-                    'row_index': tree_node.get('row_index'),
-                    'order_in_folder': tree_node.get('order_in_folder'),
-                    # Устанавливаем тип, если он есть в tree_node, иначе оставляем существующий или 'vehicle'
-                    'type': tree_node.get('type', merged_node.get('type', 'vehicle')),
-                     # Устанавливаем категорию, если она есть в tree_node, иначе оставляем существующую или 'standard'
-                    'tech_category': tree_node.get('tech_category', merged_node.get('tech_category', 'standard'))
-                })
+            # Не пропускаем больше узлы '_group', так как ID должны быть нормальными
+            # if key == "_group": ...
+
+            if key in merged_dict_by_id:
+                # Обновляем существующую запись из List View данными из Tree View
+                merged_node = merged_dict_by_id[key]
+                # Обновляем только те поля, которые пришли из TreeView и могут быть None/пустыми в ListView
+                merged_node['image_url'] = tree_node.get('image_url', merged_node.get('image_url')) # Оставляем старое, если в tree нет
+                merged_node['parent_external_id'] = tree_node.get('parent_external_id', merged_node.get('parent_external_id'))
+                merged_node['column_index'] = tree_node.get('column_index', merged_node.get('column_index'))
+                merged_node['row_index'] = tree_node.get('row_index', merged_node.get('row_index'))
+                merged_node['order_in_folder'] = tree_node.get('order_in_folder', merged_node.get('order_in_folder'))
+                # Тип и категорию берем из TreeView, т.к. там точнее (папка/техника, прем/стандарт)
+                merged_node['type'] = tree_node.get('type', merged_node.get('type', 'vehicle'))
+                merged_node['tech_category'] = tree_node.get('tech_category', merged_node.get('tech_category', 'standard'))
+                # Имя берем из TreeView только если оно там есть и отличается от ListView (на случай расхождений, хотя лучше из ListView)
+                if tree_node.get('name') and tree_node.get('name') != merged_node.get('name'):
+                     # print(f"Debug: Расхождение имен для ID {key}: List='{merged_node.get('name')}', Tree='{tree_node.get('name')}' -> Используем из List")
+                     pass # Оставляем имя из ListView как более полное
+                updated_count += 1
             else:
-                # Добавляем новую запись, если ее не было в list_view_data
-                # Устанавливаем значения по умолчанию для новой записи
-                tree_node.setdefault('type', 'vehicle')
+                # Добавляем новую запись (узел был только в Tree View, например, папка)
+                # Гарантируем наличие стандартных полей
+                tree_node.setdefault('link', '')
+                tree_node.setdefault('country', '')
+                tree_node.setdefault('battle_rating', '')
+                tree_node.setdefault('silver', None)
+                tree_node.setdefault('rank', '')
+                tree_node.setdefault('vehicle_category', '') # Будет заполнено для папок ниже
+                tree_node.setdefault('required_exp', None)
+                tree_node.setdefault('image_url', '')
+                tree_node.setdefault('parent_external_id', '')
+                tree_node.setdefault('column_index', None)
+                tree_node.setdefault('row_index', None)
+                tree_node.setdefault('order_in_folder', None) # У папок он и так None из экстрактора
+                tree_node.setdefault('type', 'vehicle') # Если тип не пришел, считаем техникой
                 tree_node.setdefault('tech_category', 'standard')
-                tree_node.setdefault('image_url', '') # Убедимся, что у новых записей есть image_url
-                merged_dict[ext_id] = tree_node
-                logging.info(f"Добавлен новый узел из tree_view_data с external_id='{ext_id}'.")
 
-        # 3. Гарантируем наличие 'data_ulist_id'
-        for key, item in merged_dict.items():
-            if 'data_ulist_id' not in item or not item['data_ulist_id']:
-                item['data_ulist_id'] = item.get('external_id', key) # Используем external_id или сам ключ словаря
+                merged_dict_by_id[key] = tree_node
+                added_count += 1
+        print(f"Обновлено из Tree View: {updated_count}")
+        print(f"Добавлено из Tree View: {added_count} (пропущено без ID: {skipped_tree_view_no_id})")
 
-        # 4. Преобразование в список
-        merged_data = list(merged_dict.values())
+        # 3. Преобразование в список
+        merged_data = list(merged_dict_by_id.values())
+        print(f"Всего узлов перед обработкой папок: {len(merged_data)}")
 
-        # 5. Обработка групповых узлов ('folder')
+        # 4. Пост-обработка: Заполнение данных для папок на основе детей
         folder_items = [item for item in merged_data if item.get('type') == 'folder']
-        for idx, folder in enumerate(folder_items):
-            # Установка виртуальных индексов для папок, если они отсутствуют
-            if folder.get('row_index') is None:
-                folder['row_index'] = 0 # Обычно папки вверху
-            if folder.get('column_index') is None:
-                folder['column_index'] = idx # Используем порядковый номер как индекс колонки
-            if folder.get('order_in_folder') is None:
-                 # Для папок order_in_folder может не иметь смысла или быть 0, если они не внутри другой папки
-                 # Используем idx для уникальности, если необходимо
-                 folder['order_in_folder'] = idx
+        print(f"Найдено папок для пост-обработки: {len(folder_items)}")
 
-        # Заполнение отсутствующих данных ('rank', 'country', 'vehicle_category') у папок
+        # Создаем словарь узлов по их ID для быстрого поиска детей
+        nodes_by_definitive_id = {self._get_definitive_id(n): n for n in merged_data if self._get_definitive_id(n)}
+
+        processed_folders = 0
         for folder in folder_items:
-            folder_id = folder.get('data_ulist_id')
-            # Ищем дочерние ноды
-            children = [n for n in merged_data if n.get('parent_external_id') == folder_id]
+            folder_id = self._get_definitive_id(folder)
+            if not folder_id: continue
+
+            # Ищем дочерние узлы (те, у кого parent_external_id равен ID папки)
+            # Важно: parent_external_id ребенка должен точно совпадать с ID папки
+            children = [
+                n for n in merged_data
+                if n.get('parent_external_id') == folder_id
+            ]
+
+            # print(f"Debug: Папка ID={folder_id}, Имя='{folder.get('name')}', Найдено детей: {len(children)}")
+            # if children:
+            #      print(f"Debug: Дети папки '{folder.get('name')}': {[self._get_definitive_id(c) for c in children]}")
+
 
             if children:
-                if not folder.get('rank'):
-                    # Ищем подходящего ребенка для взятия ранга:
-                    # Условие: order_in_folder существует (не None) и >= 0
-                    valid_children_for_rank = [
-                        child for child in children
-                        if child.get('order_in_folder') is not None and isinstance(child.get('order_in_folder'), (int, float)) and child.get('order_in_folder') >= 0
-                    ]
-                    # Если нашли подходящих детей, берем ранг из первого такого ребенка
-                    if valid_children_for_rank:
-                        folder['rank'] = valid_children_for_rank[0].get('rank', '')
-                        logging.debug(f"Для папки '{folder_id}' установлен ранг '{folder['rank']}' от ребенка '{valid_children_for_rank[0].get('data_ulist_id')}'.")
-                    else:
-                        # Если подходящих детей не найдено, можно либо оставить ранг пустым,
-                        # либо взять от первого ребенка (как было раньше).
-                        # Оставляем ранг пустым, согласно требованию "брался ранг ТОЛЬКО той ноды".
-                        logging.debug(f"Для папки '{folder_id}' не найдено подходящих детей (с order_in_folder >= 0) для установки ранга.")
-                        # Если нужен fallback: folder['rank'] = children[0].get('rank', '')
+                # --- Заполнение 'rank' ---
+                if not folder.get('rank'): # Заполняем, только если ранг еще не установлен
+                    # Ищем первого подходящего ребенка для ранга
+                    suitable_child_for_rank = None
+                    # Сортируем детей по order_in_folder (сначала 0, потом 1, ...)
+                    # None значения считаем последними
+                    children.sort(key=lambda x: x.get('order_in_folder') if x.get('order_in_folder') is not None else float('inf'))
 
-                # --- Логика для 'country' и 'vehicle_category' (остается прежней) ---
+                    for child in children:
+                         # Условие: ребенок - техника, имеет ранг и order_in_folder >= 0
+                         child_order = child.get('order_in_folder')
+                         is_suitable = (
+                              child.get('type') == 'vehicle' and
+                              child.get('rank') and
+                              child_order is not None and
+                              isinstance(child_order, (int, float)) and
+                              child_order >= 0
+                         )
+                         if is_suitable:
+                              suitable_child_for_rank = child
+                              break # Нашли первого подходящего
+
+                    if suitable_child_for_rank:
+                        folder['rank'] = suitable_child_for_rank.get('rank')
+                        # print(f"Для папки '{folder.get('name')}' ({folder_id}) установлен ранг '{folder['rank']}' от ребенка '{self._get_definitive_id(suitable_child_for_rank)}'")
+                    # else:
+                    #      print(f"Предупреждение: Для папки '{folder.get('name')}' ({folder_id}) не найдено подходящих детей для установки ранга.")
+
+
+                # --- Заполнение 'country' и 'vehicle_category' (берем из первого ребенка) ---
+                first_child = children[0]
                 if not folder.get('country'):
-                    # Берем данные из первого ребенка в списке children
-                    folder['country'] = children[0].get('country', '')
-                    logging.debug(f"Для папки '{folder_id}' установлена страна '{folder['country']}' от первого ребенка '{children[0].get('data_ulist_id')}'.")
-
+                    folder['country'] = first_child.get('country', '')
                 if not folder.get('vehicle_category'):
-                     # Берем данные из первого ребенка в списке children
-                    folder['vehicle_category'] = children[0].get('vehicle_category', '')
-                    logging.debug(f"Для папки '{folder_id}' установлена категория '{folder['vehicle_category']}' от первого ребенка '{children[0].get('data_ulist_id')}'.")
-            else:
-                logging.debug(f"Папка '{folder_id}' не имеет дочерних узлов в предоставленных данных.")
+                     # Категория раздела (Авиация, Техника и т.д.)
+                    folder['vehicle_category'] = first_child.get('vehicle_category', '')
+
+                # Заполнение tech_category (premium/standard) для папки (если все дети premium?) - пока оставляем 'standard'
+                # folder['tech_category'] = ...
+
+                processed_folders += 1
+            # else:
+            #      print(f"Предупреждение: Папка '{folder.get('name')}' ({folder_id}) не имеет дочерних узлов в текущем наборе данных.")
 
 
-        logging.info(f"Слияние данных завершено. Итоговое количество узлов: {len(merged_data)}.")
+            # --- Обработка order_in_folder для папок ---
+            # Закомментировано, чтобы оставить None, как установлено в экстракторе
+            # if folder.get('order_in_folder') is None:
+            #     # Используем idx для уникальности, если необходимо (idx - порядковый номер папки)
+            #     # folder['order_in_folder'] = folder_items.index(folder)
+            #     pass # Оставляем None
+
+        print(f"Пост-обработка папок завершена (обработано {processed_folders}).")
+
+        # 5. Финальная проверка (опционально) - Убедимся, что у всех узлов есть имя? Нет, имя может отсутствовать у техники из TreeView до слияния.
+        final_count = len(merged_data)
+        print(f"Слияние данных завершено. Итого узлов: {final_count}.")
+
         return merged_data
+
 
     def extract_node_dependencies(self, merged_data):
         """
         Извлекает зависимости между узлами на основе поля 'parent_external_id'.
-
-        Проходит по объединенным данным и для каждого узла, имеющего 'parent_external_id',
-        создает запись о зависимости вида {'node_external_id': ..., 'prerequisite_external_id': ...}.
-        Пытается обработать случаи, когда родительский ID может иметь суффикс '_group'.
-
-        :param merged_data: Список словарей с объединенными данными узлов (результат работы merge_data).
-        :return: Список словарей, описывающих зависимости между узлами.
-        :rtype: list[dict]
         """
-        # Создаем словарь для быстрого поиска по 'data_ulist_id' для эффективности
-        merged_dict = {item.get('data_ulist_id'): item for item in merged_data if item.get('data_ulist_id')}
-        if not merged_dict:
-             logging.warning("Не удалось создать словарь для поиска зависимостей, возможно, отсутствуют 'data_ulist_id'.")
+        if not merged_data:
+            print("Нет данных для извлечения зависимостей.")
+            return []
+
+        # Создаем словарь для быстрого поиска узла по его ID
+        nodes_by_definitive_id = {self._get_definitive_id(n): n for n in merged_data if self._get_definitive_id(n)}
+        if not nodes_by_definitive_id:
+             print("Предупреждение: Не удалось создать словарь узлов по ID для поиска зависимостей.")
              return []
 
-
         dependencies = []
+        processed_nodes = 0
+        dependencies_found = 0
+        parent_not_found_count = 0
+
         for item in merged_data:
-            node_id = item.get('data_ulist_id')
+            processed_nodes += 1
+            node_id = self._get_definitive_id(item)
             parent_ext_id = item.get('parent_external_id')
 
             if node_id and parent_ext_id:
-                parent_found_id = None
-                # Проверяем, существует ли родитель с таким ID напрямую
-                if parent_ext_id in merged_dict:
-                    parent_found_id = parent_ext_id
-                else:
-                    # Если родитель не найден, пробуем добавить суффикс "_group" (частый случай для папок)
-                    alt_parent_id = parent_ext_id + "_group"
-                    if alt_parent_id in merged_dict:
-                        parent_found_id = alt_parent_id
-                        logging.debug(f"Найден альтернативный родитель '{alt_parent_id}' для узла '{node_id}'.")
-
-                # Если родитель найден (напрямую или с суффиксом)
-                if parent_found_id:
+                # Ищем родителя в нашем словаре узлов
+                if parent_ext_id in nodes_by_definitive_id:
                     dependencies.append({
                         'node_external_id': node_id,
-                        'prerequisite_external_id': parent_found_id
+                        'prerequisite_external_id': parent_ext_id
                     })
+                    dependencies_found += 1
                 else:
-                    logging.warning(f"Родительский узел с ID '{parent_ext_id}' (или '{parent_ext_id}_group') не найден для узла '{node_id}'. Зависимость не будет создана.")
+                    # Попытка найти родителя с суффиксом _group (менее вероятно с новой логикой ID)
+                    alt_parent_id = parent_ext_id + "_group"
+                    if alt_parent_id in nodes_by_definitive_id:
+                         dependencies.append({
+                            'node_external_id': node_id,
+                            'prerequisite_external_id': alt_parent_id
+                         })
+                         dependencies_found += 1
+                         # print(f"Debug: Найдена зависимость с альт. родителем '{alt_parent_id}' для узла '{node_id}'.")
+                    else:
+                        parent_not_found_count += 1
+                        # print(f"Предупреждение: Родительский узел с ID '{parent_ext_id}' (или '{alt_parent_id}') не найден для узла '{node_id}' ({item.get('name', '')}). Зависимость не создана.")
 
-        logging.info(f"Извлечено {len(dependencies)} зависимостей.")
+        print(f"Извлечение зависимостей завершено. Обработано узлов: {processed_nodes}. Найдено зависимостей: {dependencies_found} (родитель не найден: {parent_not_found_count}).")
         return dependencies
-
-# Пример использования (если нужно протестировать)
-if __name__ == '__main__':
-    # Пример данных (замените на ваши реальные данные)
-    list_data = [
-        {'data_ulist_id': 'item1', 'name': 'Item 1', 'rank': 'A', 'country': 'USA'},
-        {'data_ulist_id': 'item2', 'name': 'Item 2', 'rank': 'B', 'country': 'Canada'},
-        {'data_ulist_id': 'item3', 'name': 'Item 3', 'rank': 'C', 'country': 'Mexico'},
-        {'data_ulist_id': 'folder1', 'name': 'Folder 1'}, # Папка может не иметь ранга/страны в list view
-        {'external_id': 'item_no_ulist', 'name': 'Item without ulist_id'} # Пример с external_id
-    ]
-    tree_data = [
-        {'external_id': 'item1', 'parent_external_id': 'folder1', 'order_in_folder': 0, 'type': 'vehicle'},
-        {'external_id': 'item2', 'parent_external_id': 'folder1', 'order_in_folder': None, 'type': 'vehicle'}, # order_in_folder = None
-        {'external_id': 'item3', 'parent_external_id': 'folder1', 'order_in_folder': -1, 'type': 'vehicle'}, # order_in_folder < 0
-        {'external_id': 'folder1', 'type': 'folder'},
-        {'external_id': 'item_no_ulist', 'parent_external_id': 'folder1', 'order_in_folder': 1, 'type': 'vehicle', 'rank': 'D'} # Этот должен подойти для ранга
-    ]
-
-    # Создание экземпляра и вызов методов
-    merger = NodesMerger(list_data, tree_data)
-    merged_result = merger.merge_data()
-    dependencies_result = merger.extract_node_dependencies(merged_result)
-
-    # Вывод результатов (для демонстрации)
-    import json
-    print("--- Merged Data ---")
-    print(json.dumps(merged_result, indent=2))
-
-    print("\n--- Dependencies ---")
-    print(json.dumps(dependencies_result, indent=2))
-
-    # Проверка ранга папки folder1
-    folder1_node = next((item for item in merged_result if item.get('data_ulist_id') == 'folder1'), None)
-    if folder1_node:
-        print(f"\nРанг папки 'folder1': {folder1_node.get('rank')}") # Должен быть 'A' от item1 или 'D' от item_no_ulist в зависимости от порядка
-        # По коду item1 идет раньше, но order_in_folder = 0. item_no_ulist идет позже, но order_in_folder = 1.
-        # Он возьмет ранг от первого подходящего, то есть от item1, ранг 'A'.
-        # Если бы у item1 был order_in_folder = None или < 0, то он бы взял ранг 'D' от item_no_ulist
-        print(f"Страна папки 'folder1': {folder1_node.get('country')}") # Должна быть 'USA' от item1 (первого ребенка)

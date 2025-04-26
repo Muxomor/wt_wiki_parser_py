@@ -2,134 +2,138 @@ import csv
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException # Добавлен импорт
+from tree_data_extractor import TreeDataExtractor
 
 def save_to_csv(data_list, filename="vehicles.csv", fieldnames=None):
+    """Сохраняет список словарей в CSV файл."""
     if not data_list:
-        print("Нет данных для сохранения.")
+        print(f"Нет данных для сохранения в {filename}.")
         return
+    if not isinstance(data_list, list) or not isinstance(data_list[0], dict):
+         print(f"Ошибка: Ожидался список словарей для сохранения в {filename}, получен {type(data_list)}.")
+         return
+
     if not fieldnames:
-        fieldnames = [
-            "data_ulist_id", "external_id", "link", "name", "country", "battle_rating",
-            "silver", "rank", "vehicle_category", "type", "required_exp",
-            "image_url", "parent_external_id", "column_index", "row_index", "order_in_folder"
-        ]
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        dict_writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
-        dict_writer.writeheader()
-        dict_writer.writerows(data_list)
-    print(f"Данные сохранены в {filename}")
+        # Определяем поля на основе ключей первого словаря
+        fieldnames = list(data_list[0].keys())
+        # Можно задать желаемый порядок полей вручную, если нужно
+        # default_order = ["data_ulist_id", "external_id", "name", "type", ...]
+        # fieldnames.sort(key=lambda x: default_order.index(x) if x in default_order else float('inf'))
+
+    try:
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            # extrasaction='ignore' игнорирует поля в словаре, которых нет в fieldnames
+            # restval='' записывает пустую строку для полей из fieldnames, которых нет в словаре
+            dict_writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore', restval='')
+            dict_writer.writeheader()
+            dict_writer.writerows(data_list)
+        print(f"Данные ({len(data_list)} строк) сохранены в {filename}")
+    except Exception as e:
+        print(f"Ошибка при сохранении данных в CSV {filename}: {e}")
+
 
 def save_country_flags_to_csv(country_images, filename="country_flags.csv"):
     """
     Сохраняет информацию о странах и URL флагов в CSV-файл.
-    
-    :param country_images: Словарь вида {country: flag_image_url}
-    :param filename: Имя файла для сохранения
     """
     import csv
+    if not country_images:
+         print(f"Нет данных о флагах стран для сохранения в {filename}.")
+         return
     try:
         with open(filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["country", "flag_image_url"])
             for country, image_url in country_images.items():
                 writer.writerow([country, image_url])
-        print(f"Информация о странах сохранена в файл {filename}")
+        print(f"Информация о странах ({len(country_images)} записей) сохранена в файл {filename}")
     except Exception as e:
         print(f"Ошибка при сохранении информации о странах: {e}")
 
 
 def save_dependencies_to_csv(dependencies, filename="dependencies.csv", fieldnames=None):
+    """Сохраняет зависимости узлов в CSV файл."""
     if not dependencies:
-        print("Нет зависимостей для сохранения.")
+        print(f"Нет зависимостей для сохранения в {filename}.")
         return
     if not fieldnames:
         fieldnames = ["node_external_id", "prerequisite_external_id"]
-    with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
-        writer.writeheader()
-        writer.writerows(dependencies)
-    print(f"Зависимости сохранены в {filename}")
+    try:
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore', restval='')
+            writer.writeheader()
+            writer.writerows(dependencies)
+        print(f"Зависимости ({len(dependencies)} строк) сохранены в {filename}")
+    except Exception as e:
+         print(f"Ошибка при сохранении зависимостей в CSV {filename}: {e}")
+
 
 def get_all_nation_tree_data(helper, target_section):
-    nation_tree_data = {}
+    """
+    Собирает все узлы (техника и папки) из Tree View для всех наций в текущем разделе.
+    """
+    all_nodes_in_section = []
     try:
-        container = helper.driver.find_element(By.CSS_SELECTOR, "div.navtabs_wrapper")
+        container = helper.wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.navtabs_wrapper"))
+        )
         nation_tabs = container.find_elements(By.CSS_SELECTOR, "div.navtabs_item")
-        print(f"Найдено вкладок наций: {len(nation_tabs)}")
-        
-        # Обрабатываем только первую вкладку, вместо перебора всех
-        if nation_tabs:
-            tab = nation_tabs[0]
+        print(f"Найдено вкладок наций в разделе '{target_section}': {len(nation_tabs)}")
+
+        if not nation_tabs:
+             print(f"Предупреждение: Вкладки наций не найдены в разделе '{target_section}'.")
+             return []
+
+        extractor = TreeDataExtractor(helper)
+
+        for i, tab in enumerate(nation_tabs):
             nation_label = ""
             try:
                 helper.driver.execute_script(
                     "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", tab
                 )
-                #time.sleep(0.5)
+                time.sleep(0.5)
+
                 try:
-                    nation_label = tab.find_element(By.CSS_SELECTOR, "div.navtabs_item-label").text.strip()
-                except Exception as e:
-                    nation_label = ""
-                    print("Не удалось получить название вкладки:", e)
-                print(f"Собираем данные для нации: {nation_label if nation_label else '[без названия]'}")
+                    label_element = tab.find_element(By.CSS_SELECTOR, "div.navtabs_item-label")
+                    nation_label = label_element.text.strip()
+                except Exception:
+                    nation_label = f"[вкладка {i+1}]"
+                    # print(f"Предупреждение: Не удалось получить название нации для вкладки {i+1} в разделе '{target_section}'.")
+
+                print(f"---> Обработка нации: {nation_label} (вкладка {i+1}/{len(nation_tabs)}) в разделе '{target_section}'")
+
                 try:
-                    tab.click()
+                    helper.wait.until(EC.element_to_be_clickable(tab)).click()
                 except Exception as e:
-                    print("Ошибка клика по вкладке, пробую JS click.")
-                    helper.driver.execute_script("arguments[0].click();", tab)
-                time.sleep(20)
-                from tree_data_extractor import TreeDataExtractor
-                extractor = TreeDataExtractor(helper)
+                    print(f"Предупреждение: Обычный клик по вкладке '{nation_label}' не сработал ({e}). Пробую JS click.")
+                    try:
+                        helper.driver.execute_script("arguments[0].click();", tab)
+                    except Exception as js_e:
+                        print(f"КРИТИЧЕСКАЯ ОШИБКА: JS click по вкладке '{nation_label}' также не удался: {js_e}. Пропускаем нацию.")
+                        continue
+
+                # Ожидание загрузки данных дерева (можно улучшить, ожидая конкретный элемент дерева)
+                time.sleep(2.5) # Увеличена пауза для надежности
+
                 nation_data = extractor.extract_nodes()
-                print(f"Извлечено {len(nation_data)} узлов для нации {nation_label} в разделе {target_section}")
-                for node in nation_data:
-                    ext_id = node.get("external_id")
-                    if ext_id and ext_id not in nation_tree_data:
-                        nation_tree_data[ext_id] = node
-            except Exception as ne:
-                print(f"Ошибка при обработке нации '{nation_label}': {ne}")
+                print(f"     Извлечено {len(nation_data)} узлов для нации '{nation_label}'.")
+                all_nodes_in_section.extend(nation_data)
+
+            except Exception as tab_e:
+                print(f"Ошибка при обработке вкладки нации '{nation_label}' в разделе '{target_section}': {tab_e}")
                 try:
                     helper.driver.execute_script("arguments[0].scrollLeft += 200;", container)
-                    #time.sleep(1)
-                except Exception as se:
-                    print(f"Ошибка при прокрутке контейнера: {se}")
-        
-        # Исходный цикл по всем вкладкам наций закомментирован:
-        # for tab in nation_tabs:
-        #     nation_label = ""
-        #     try:
-        #         helper.driver.execute_script(
-        #             "arguments[0].scrollIntoView({block: 'center', inline: 'center'});", tab
-        #         )
-        #         #time.sleep(0.5)
-        #         try:
-        #             nation_label = tab.find_element(By.CSS_SELECTOR, "div.navtabs_item-label").text.strip()
-        #         except Exception as e:
-        #             nation_label = ""
-        #             print("Не удалось получить название вкладки:", e)
-        #         print(f"Собираем данные для нации: {nation_label if nation_label else '[без названия]'}")
-        #         try:
-        #             tab.click()
-        #         except Exception as e:
-        #             print("Ошибка клика по вкладке, пробую JS click.")
-        #             helper.driver.execute_script("arguments[0].click();", tab)
-        #         #time.sleep(2)
-        #         from tree_data_extractor import TreeDataExtractor
-        #         extractor = TreeDataExtractor(helper)
-        #         nation_data = extractor.extract_nodes()
-        #         print(f"Извлечено {len(nation_data)} узлов для нации {nation_label} в разделе {target_section}")
-        #         for node in nation_data:
-        #             ext_id = node.get("external_id")
-        #             if ext_id and ext_id not in nation_tree_data:
-        #                 nation_tree_data[ext_id] = node
-        #     except Exception as ne:
-        #         print(f"Ошибка при обработке нации '{nation_label}': {ne}")
-        #         try:
-        #             helper.driver.execute_script("arguments[0].scrollLeft += 200;", container)
-        #             #time.sleep(1)
-        #         except Exception as se:
-        #             print(f"Ошибка при прокрутке контейнера: {se}")
-        #         continue
+                    time.sleep(0.5)
+                except Exception as scroll_e:
+                    print(f"Ошибка при попытке прокрутки контейнера вкладок после ошибки: {scroll_e}")
+                continue
+
+    except TimeoutException:
+        print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удалось найти контейнер с вкладками наций ('div.navtabs_wrapper') в разделе '{target_section}'.")
     except Exception as e:
-        print(f"Ошибка при получении вкладок наций: {e}")
-    return list(nation_tree_data.values())
+        print(f"КРИТИЧЕСКАЯ ОШИБКА: Общая ошибка при получении данных дерева для раздела '{target_section}': {e}")
+
+    print(f"Сбор данных TreeView для раздела '{target_section}' завершен. Собрано узлов: {len(all_nodes_in_section)}.")
+    return all_nodes_in_section
