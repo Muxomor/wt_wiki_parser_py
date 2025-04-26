@@ -118,7 +118,7 @@ class TreeDataExtractor:
         try:
             # Порядок среди групповых узлов
             all_folders = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_group[data-unit-id]")
-            node['order_in_folder'] = all_folders.index(folder_element)
+            node['order_in_folder'] = None
         except Exception as e:
             node['order_in_folder'] = None
             print(f"Не удалось определить порядок для группового узла {ext_id}: {e}")

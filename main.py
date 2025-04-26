@@ -229,7 +229,7 @@ def main():
         
         # 4. Извлечение требований для открытия следующей эры
         print("\nИзвлекаем требования для открытия следующей эры для наций...")
-        run_rank_requirements_extraction()
+        #run_rank_requirements_extraction()
 
         #5. Вставка извлеченных данных в БД
         print("\nЗаливаем данные в БД")
@@ -254,20 +254,20 @@ def main():
             print("Браузер закрыт")
 
 if __name__ == "__main__":
-    #main()
-    config = read_config()
-    target_sections = [
-            'Авиация', 
-            'Вертолёты', 
-            'Наземная техника',
-            'Большой флот', 
-            'Малый флот'
-        ]
-    upload_all_data(
-            config=config,
-            target_sections=target_sections,
-            country_csv="country_flags.csv",
-            merged_csv="vehicles_merged.csv",
-            deps_csv="dependencies.csv",
-            rank_csv="rank_requirements.csv"
-        )
+    main()
+    #config = read_config()
+    #target_sections = [
+    #        'Авиация', 
+    #        'Вертолёты', 
+    #        'Наземная техника',
+    #        'Большой флот', 
+    #        'Малый флот'
+    #    ]
+    #upload_all_data(
+    #        config=config,
+    #        target_sections=target_sections,
+    #        country_csv="country_flags.csv",
+    #        merged_csv="vehicles_merged.csv",
+    #        deps_csv="dependencies.csv",
+    #        rank_csv="rank_requirements.csv"
+    #    )

@@ -4,7 +4,7 @@ import csv
 import re
 
 # URL с данными о требованиях для открытия следующей эры
-DATA_URL = "https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/master/char.vromfs.bin_u/config/rank.blkx"
+DATA_URL = "http://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/master/char.vromfs.bin_u/config/rank.blkx"
 
 # Маппинг названий типов техники из JSON в нужный формат (как в target_sections)
 type_mapping = {
@@ -39,7 +39,6 @@ def extract_rank_requirements(data):
     results = []
     era_data = data.get("needBuyToOpenNextInEra", {})
     for country_key, reqs in era_data.items():
-        # Из ключа "country_ussr" получаем идентификатор нации ("ussr")
         nation = country_key.replace("country_", "")
         for req_key, required_units in reqs.items():
             if required_units == 0:

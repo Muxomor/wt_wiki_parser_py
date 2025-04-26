@@ -77,7 +77,7 @@ def get_all_nation_tree_data(helper, target_section):
                 except Exception as e:
                     print("Ошибка клика по вкладке, пробую JS click.")
                     helper.driver.execute_script("arguments[0].click();", tab)
-                #time.sleep(2)
+                time.sleep(20)
                 from tree_data_extractor import TreeDataExtractor
                 extractor = TreeDataExtractor(helper)
                 nation_data = extractor.extract_nodes()
