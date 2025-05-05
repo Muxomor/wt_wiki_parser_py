@@ -3,10 +3,8 @@ import json
 import csv
 import re
 
-# URL с данными о требованиях для открытия следующей эры
 DATA_URL = "http://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/master/char.vromfs.bin_u/config/rank.blkx"
 
-# Маппинг названий типов техники из JSON в нужный формат (как в target_sections)
 type_mapping = {
     "Aircraft": "Авиация",
     "Helicopter": "Вертолёты",
@@ -15,7 +13,6 @@ type_mapping = {
     "Boat": "Малый флот"
 }
 
-# Ключи имеют формат: needBuyToOpenNextInEra<Type><number>
 pattern = re.compile(r"needBuyToOpenNextInEra([A-Za-z]+)(\d+)")
 
 def fetch_rank_data(url=DATA_URL):

@@ -97,11 +97,9 @@ class PageHelper:
     
             for button in buttons:
                 try:
-                    # Извлекаем ключ из атрибута onclick
                     onclick_attr = button.get_attribute("onclick")
                     country_key = onclick_attr.split("'")[1] if onclick_attr else None
     
-                    # Ищем тег <img> внутри кнопки и берем его src
                     img_tag = button.find_element(By.TAG_NAME, "img")
                     img_src = img_tag.get_attribute("src")
     
@@ -137,7 +135,6 @@ class PageHelper:
         except:
             data['battle_rating'] = ''
         
-        # --- обработка серебра: числа, «—» или «Бесплатно» ---
         cells = row.find_elements(By.TAG_NAME, 'td')
         if len(cells) >= 6:
             raw = cells[5].text.strip().lower()
@@ -146,12 +143,10 @@ class PageHelper:
             elif raw == "—" or raw == "":
                 silver = ""
             else:
-                # убираем пробелы тысячных разделителей
                 silver = raw.replace(" ", "")
         else:
             silver = ""
 
-        # сбрасываем серебро для премиума/полка
         classes = row.get_attribute("class") or ""
         if "--prem" in classes or "--squad" in classes:
             silver = ""
@@ -165,7 +160,6 @@ class PageHelper:
         data['vehicle_category'] = category
         data['type'] = 'vehicle'
 
-        # скрытые юниты (без BR или silver) пропускаем
         if not data.get('battle_rating') or data['battle_rating'] == '—':
             return None
 

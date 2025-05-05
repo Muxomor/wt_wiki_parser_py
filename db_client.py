@@ -38,7 +38,6 @@ class PostgrestClient:
         url = f"{self.base}/{path}"
         r = self.session.patch(url, json=data)
         r.raise_for_status()
-        # Обрабатываем так же, как в _post:
         if r.text:
             try:
                 return r.json()
@@ -46,7 +45,6 @@ class PostgrestClient:
                 return r.status_code
         return r.status_code
 
-    # Справочники
     def upsert_vehicle_types(self, names):
         return self._post('vehicle_types', [{'name': n} for n in names])
 

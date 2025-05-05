@@ -1,6 +1,5 @@
 import os
 import time
-# import logging # Убрано
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
@@ -85,11 +84,11 @@ def main():
         config = read_config()
         print("Конфиг успешно загружен:")
         for key, value in config.items():
-            print(f"  {key}: {value}") # Можно скрыть для краткости
+            print(f"  {key}: {value}")
 
         driver = configure_driver(config)
 
-        helper = PageHelper(driver, wait_timeout=20) # Увеличено время ожидания
+        helper = PageHelper(driver, wait_timeout=20)
         start_url = config['start_url']
         print(f"\nЗагрузка стартовой страницы: {start_url}")
         driver.get(start_url)
@@ -123,27 +122,23 @@ def main():
                 )
                 nav_item.click()
                 print(f"Переход в раздел '{section}' выполнен.")
-                time.sleep(1.5) # Небольшая пауза
+                time.sleep(1.5) 
 
                 list_button = helper.wait_for_id('wt-show-list')
                 if list_button:
                     try:
-                        # Прокрутка к кнопке перед кликом
                         driver.execute_script("arguments[0].scrollIntoView(true);", list_button)
-                        #time.sleep(0.5)
                         helper.wait.until(EC.element_to_be_clickable(list_button)).click()
                     except Exception as e:
                         print(f"Предупреждение: Обычный клик по кнопке List не сработал: {e}. Пробую JS click.")
                         driver.execute_script("arguments[0].click();", list_button)
                     print("Кнопка 'List' активирована.")
-                    #time.sleep(1.5) # Пауза для обновления
 
                     rows = helper.get_vehicle_rows()
                     total_rows = len(rows)
                     print(f"Найдено строк техники: {total_rows}")
                     processed_count = 0
                     for idx, row in enumerate(rows, start=1):
-                        # print(f"Debug: Обработка строки {idx}/{total_rows}")
                         try:
                             data = helper.parse_vehicle_row(row, section)
                             if data is None:
@@ -185,8 +180,8 @@ def main():
         # 1.1 Сбор информации о странах
         print("\n--- Сбор информации о странах ---")
         country_images = {}
-        if vehicles_data or target_sections: # Пытаемся собрать, даже если list view пуст
-            first_section = target_sections[0] if target_sections else 'Авиация' # Запасной вариант
+        if vehicles_data or target_sections:
+            first_section = target_sections[0] if target_sections else 'Авиация' 
             try:
                 print(f"Переход в раздел '{first_section}' для сбора информации о странах.")
                 nav_item = helper.wait.until(
@@ -197,7 +192,6 @@ def main():
                 nav_item.click()
                 time.sleep(1)
 
-                # Ожидание появления блока с кнопками стран
                 country_button_container = helper.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.unit-filter_country-buttons")))
                 print("Блок кнопок стран найден.")
                 time.sleep(0.5)
@@ -224,11 +218,10 @@ def main():
                 )
                 nav_item.click()
                 print(f"Переход в раздел '{section}' выполнен.")
-                time.sleep(1.5) # Пауза
+                time.sleep(1.5)
 
                 tree_button = helper.wait.until(EC.presence_of_element_located((By.ID, "wt-show-tree")))
                 try:
-                     # Прокрутка к кнопке перед кликом
                      driver.execute_script("arguments[0].scrollIntoView(true);", tree_button)
                      time.sleep(0.5)
                      helper.wait.until(EC.element_to_be_clickable(tree_button)).click()
@@ -236,7 +229,7 @@ def main():
                     print(f"Предупреждение: Обычный клик по кнопке Tree не сработал: {e}. Пробую JS click.")
                     driver.execute_script("arguments[0].click();", tree_button)
                 print("Кнопка 'Tree' активирована.")
-                time.sleep(2.5) # Пауза для загрузки дерева
+                time.sleep(2.5)
 
                 section_tree_data = get_all_nation_tree_data(helper, section)
                 print(f"Собрано узлов из Tree View для раздела '{section}': {len(section_tree_data)}")
@@ -259,8 +252,7 @@ def main():
         for node in tree_view_data_raw:
             if node.get('type') == 'folder' and not node.get('name'):
                 folders_without_name_count += 1
-                # print(f"Пропуск папки без имени: ID={node.get('data_ulist_id') or node.get('external_id')}")
-                continue # Пропускаем папку без имени
+                continue
             filtered_tree_data_step1.append(node)
         print(f"Узлов после фильтрации папок без имени: {len(filtered_tree_data_step1)} (удалено папок без имени: {folders_without_name_count})")
 
@@ -270,7 +262,6 @@ def main():
         duplicates_count = 0
         nodes_without_id_count = 0
         for node in filtered_tree_data_step1:
-            # Приоритет у data_ulist_id, если нет - external_id
             node_id = node.get('data_ulist_id') or node.get('external_id')
 
             if node_id:
@@ -279,14 +270,11 @@ def main():
                     seen_ids.add(node_id)
                 else:
                     duplicates_count += 1
-                    # print(f"Пропуск дубликата по ID '{node_id}' для узла: {node.get('name')}")
             else:
                  nodes_without_id_count += 1
-                 # print(f"Предупреждение: Узел пропущен при проверке уникальности из-за отсутствия ID: {node.get('name')}")
 
         print(f"Узлов после фильтрации по уникальности ID: {len(unique_tree_data)} (удалено дубликатов: {duplicates_count}, узлов без ID: {nodes_without_id_count})")
 
-        # Сохраняем отфильтрованные данные Tree View
         save_to_csv(unique_tree_data, filename="vehicles_tree_filtered.csv")
 
         ## 3. Объединение данных и формирование зависимостей
@@ -352,7 +340,6 @@ def main():
         print(f"\nСкрипт успешно выполнился за: {elapse_time:.2f} сек. ({elapse_time / 60:.2f} мин.)")
 
     except Exception as e:
-        # Используем print для вывода критических ошибок вместо logging.critical
         import traceback
         print(f"\nКРИТИЧЕСКАЯ ОШИБКА выполнения скрипта: {e}")
         print("Traceback:")

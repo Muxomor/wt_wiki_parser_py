@@ -15,16 +15,10 @@ def save_to_csv(data_list, filename="vehicles.csv", fieldnames=None):
          return
 
     if not fieldnames:
-        # Определяем поля на основе ключей первого словаря
         fieldnames = list(data_list[0].keys())
-        # Можно задать желаемый порядок полей вручную, если нужно
-        # default_order = ["data_ulist_id", "external_id", "name", "type", ...]
-        # fieldnames.sort(key=lambda x: default_order.index(x) if x in default_order else float('inf'))
 
     try:
         with open(filename, "w", newline="", encoding="utf-8") as f:
-            # extrasaction='ignore' игнорирует поля в словаре, которых нет в fieldnames
-            # restval='' записывает пустую строку для полей из fieldnames, которых нет в словаре
             dict_writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore', restval='')
             dict_writer.writeheader()
             dict_writer.writerows(data_list)
@@ -100,9 +94,8 @@ def get_all_nation_tree_data(helper, target_section):
                     nation_label = label_element.text.strip()
                 except Exception:
                     nation_label = f"[вкладка {i+1}]"
-                    # print(f"Предупреждение: Не удалось получить название нации для вкладки {i+1} в разделе '{target_section}'.")
 
-                print(f"---> Обработка нации: {nation_label} (вкладка {i+1}/{len(nation_tabs)}) в разделе '{target_section}'")
+                print(f"Обработка нации: {nation_label} (вкладка {i+1}/{len(nation_tabs)}) в разделе '{target_section}'")
 
                 try:
                     helper.wait.until(EC.element_to_be_clickable(tab)).click()
@@ -114,11 +107,10 @@ def get_all_nation_tree_data(helper, target_section):
                         print(f"КРИТИЧЕСКАЯ ОШИБКА: JS click по вкладке '{nation_label}' также не удался: {js_e}. Пропускаем нацию.")
                         continue
 
-                # Ожидание загрузки данных дерева (можно улучшить, ожидая конкретный элемент дерева)
-                time.sleep(2.5) # Увеличена пауза для надежности
+                time.sleep(2.5)
 
                 nation_data = extractor.extract_nodes()
-                print(f"     Извлечено {len(nation_data)} узлов для нации '{nation_label}'.")
+                print(f"Извлечено {len(nation_data)} узлов для нации '{nation_label}'.")
                 all_nodes_in_section.extend(nation_data)
 
             except Exception as tab_e:

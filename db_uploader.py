@@ -85,26 +85,22 @@ def upload_all_data(config,
             print(f"[SKIP] узел {ext}: неизвестный vehicle_type '{vt_key}'")
             continue
 
-        # rank → int (араб./римские)
         r = (nd.get('rank') or '').strip()
         try:
             rank_int = int(r)
         except ValueError:
             rank_int = roman_to_int(r)
 
-        # --- Новая логика для folder-узлов: ---
         if nd.get('type') == 'folder':
             tech_category = 'standard'
             silver_cost   = 0
             required_exp  = 0
         else:
-            # silver_cost и required_exp для обычных юнитов
             silver_raw   = nd.get('silver') or None
             exp_raw      = nd.get('required_exp') or None
             silver_cost  = int(silver_raw) if silver_raw is not None else None
             required_exp = int(exp_raw)    if exp_raw    is not None else None
 
-            # tech_category logic
             if silver_cost is not None:
                 tech_category = 'standard'
                 if required_exp is None:
@@ -113,7 +109,6 @@ def upload_all_data(config,
                 tech_category = 'premium'
                 required_exp = None
 
-        # парсим battle_rating
         br_raw = nd.get('battle_rating') or None
         if br_raw:
             try:
@@ -141,7 +136,7 @@ def upload_all_data(config,
         })
 
     # 6) вставляем nodes по одной записи (для отладки)
-    print("\n=== Вставка nodes по одной записи ===")
+    print("\nВставка nodes по одной записи")
     for idx, rec in enumerate(nodes_payload, 1):
         try:
             client.insert_nodes([rec])
@@ -154,7 +149,7 @@ def upload_all_data(config,
             raise
 
     # 7) обновление parent_id
-    print("\n=== Обновление parent_id ===")
+    print("\nОбновление parent_id")
     node_map = client.fetch_map('nodes', key_field='external_id')
     for nd in merged_data:
         ext    = (nd.get('data_ulist_id') or '').strip()
@@ -166,7 +161,7 @@ def upload_all_data(config,
     print("parent_id обновлены")
 
     # 8) node_dependencies
-    print("\n=== Загрузка node_dependencies ===")
+    print("\nЗагрузка node_dependencies")
     deps = []
     with open(deps_csv, encoding='utf-8') as f:
         for row in csv.DictReader(f):
@@ -178,7 +173,7 @@ def upload_all_data(config,
     print(f"node dependecies : {deps}")
 
     # 9) rank_requirements
-    print("\n=== Загрузка rank_requirements ===")
+    print("\nЗагрузка rank_requirements")
     rr = []
     with open(rank_csv, encoding='utf-8') as f:
         for row in csv.DictReader(f):
@@ -192,4 +187,4 @@ def upload_all_data(config,
     client.insert_rank_requirements(rr)
     print(f" rank_requirements : {rr}")
 
-    print("\n✔ Всё успешно загружено через PostgREST")
+    print("\nВсё успешно загружено через PostgREST")

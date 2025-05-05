@@ -23,27 +23,22 @@ class TreeDataExtractor:
         node['data_ulist_id'] = element.get_attribute("data-ulist-id")
         node['external_id'] = element.get_attribute("data-unit-id")
 
-        # --- Гарантируем наличие обоих ID, используя один из них как запасной ---
         if not node['data_ulist_id'] and node['external_id']:
              node['data_ulist_id'] = node['external_id']
         elif not node['external_id'] and node['data_ulist_id']:
              node['external_id'] = node['data_ulist_id']
         elif not node['data_ulist_id'] and not node['external_id']:
-             # Это не должно происходить для техники, но на всякий случай
              print(f"КРИТИЧЕСКОЕ ПРЕДУПРЕЖДЕНИЕ: Узел техники не имеет ни data-ulist-id, ни data-unit-id!")
-             # Попытка извлечь имя для идентификации
              try:
                   name_elem = element.find_element(By.CSS_SELECTOR, ".wt-tree_item-text span")
-                  print(f"   Проблемный узел (возможно): {name_elem.text.strip()}")
+                  print(f"Проблемный узел (возможно): {name_elem.text.strip()}")
              except:
-                  print(f"   Проблемный узел без имени и ID.")
-             return None # Пропускаем узел без ID
+                  print(f"Проблемный узел без имени и ID.")
+             return None 
 
-        # --- Получаем parent_external_id из data-unit-req (если есть) ---
         node['parent_external_id'] = element.get_attribute("data-unit-req") or ""
-        has_req_parent = bool(node['parent_external_id']) # Запоминаем, был ли родитель из data-unit-req
+        has_req_parent = bool(node['parent_external_id'])
 
-        # --- Получаем остальные атрибуты ---
         try:
             name_elem = element.find_element(By.CSS_SELECTOR, ".wt-tree_item-text span")
             node['name'] = name_elem.text.strip()
@@ -73,22 +68,14 @@ class TreeDataExtractor:
             node['column_index'] = None
             node['row_index'] = None
 
-        # --- Определяем order_in_folder и родителя из группы (если применимо) ---
-        node['order_in_folder'] = None # По умолчанию None
+        node['order_in_folder'] = None 
         try:
-            # Ищем контейнер родительской группы items
             parent_container = element.find_element(By.XPATH, "./ancestor::div[contains(@class, 'wt-tree_group-items')][1]")
-            # Находим непосредственных детей-элементов внутри этого контейнера
             children_in_group = parent_container.find_elements(By.CSS_SELECTOR, ":scope > div.wt-tree_item")
             if element in children_in_group:
                  node['order_in_folder'] = children_in_group.index(element)
-                 # print(f"Debug: Узел {node.get('external_id')} найден внутри группы, order={node['order_in_folder']}")
-
-                 # Если узел в группе И у него НЕ БЫЛО родителя из data-unit-req, ищем ID самой группы
                  if not has_req_parent:
-                      # print(f"Debug: У узла {node.get('external_id')} нет data-unit-req, ищем ID родительской группы...")
                       try:
-                           # Ищем сам элемент группы, который содержит parent_container
                            parent_group_element = parent_container.find_element(By.XPATH, "./ancestor::div[contains(@class, 'wt-tree_group')][1]")
                            parent_ulist_id = parent_group_element.get_attribute("data-ulist-id")
                            parent_unit_id = parent_group_element.get_attribute("data-unit-id")
@@ -96,10 +83,9 @@ class TreeDataExtractor:
 
                            if parent_id_from_group:
                                 node['parent_external_id'] = parent_id_from_group
-                                # print(f"Debug: ---> Назначен родитель из группы: {parent_id_from_group} для узла {node.get('external_id')}")
                            else:
                                 print(f"Предупреждение: Родительская группа для узла {node.get('external_id')} не имеет ID (ulist или unit).")
-                                node['parent_external_id'] = "" # Оставляем пустым
+                                node['parent_external_id'] = "" 
 
                       except NoSuchElementException:
                            print(f"Предупреждение: Не найден элемент родительской группы для узла {node.get('external_id')}, хотя он в 'group-items'.")
@@ -107,21 +93,13 @@ class TreeDataExtractor:
                       except Exception as e_parent:
                            print(f"Ошибка при поиске ID родительской группы для {node.get('external_id')}: {e_parent}")
                            node['parent_external_id'] = ""
-                 # else:
-                      # print(f"Debug: У узла {node.get('external_id')} уже есть родитель из data-unit-req: {node['parent_external_id']}")
 
         except NoSuchElementException:
-             # Если не найден 'wt-tree_group-items', значит узел не в папке
              node['order_in_folder'] = None
-             # print(f"Debug: Узел {node.get('external_id')} не находится внутри 'wt-tree_group-items'.")
         except Exception as e_order:
              print(f"Ошибка при определении порядка/родителя в группе для {node.get('external_id')}: {e_order}")
              node['order_in_folder'] = None
-             # Если была ошибка здесь, но родитель был из data-unit-req, он сохранится.
-             # Если не было, то останется пустым.
 
-        # Финальный print для отладки узла
-        # print(f"Извлечен узел техники: id={node.get('data_ulist_id')}, ext_id={node.get('external_id')}, name='{node.get('name')}', parent='{node.get('parent_external_id')}', type={node.get('type')}, coords=({node.get('row_index')}, {node.get('column_index')}, {node.get('order_in_folder')})")
         return node
 
     def extract_folder_node(self, folder_element):
@@ -139,8 +117,6 @@ class TreeDataExtractor:
              node['name'] = ""
              print(f"Предупреждение: Не удалось извлечь имя для папки с ID: ulist='{node['data_ulist_id']}', unit='{node['external_id']}'")
 
-
-        # --- Гарантируем наличие обоих ID ---
         if not node['data_ulist_id'] and node['external_id']:
             node['data_ulist_id'] = node['external_id']
         elif not node['external_id'] and node['data_ulist_id']:
@@ -163,7 +139,6 @@ class TreeDataExtractor:
         except Exception:
             node['image_url'] = ""
 
-        # Вычисление индексов через таблицу
         try:
             td = folder_element.find_element(By.XPATH, "./ancestor::td[1]")
             tr = td.find_element(By.XPATH, "./ancestor::tr[1]")
@@ -176,51 +151,43 @@ class TreeDataExtractor:
             node['row_index'] = None
             node['column_index'] = None
 
-        # Для папок order_in_folder не имеет смысла (они не *внутри* другой папки)
         node['order_in_folder'] = None
 
-        # print(f"Извлечена папка: id={node.get('data_ulist_id')}, ext_id={node.get('external_id')}, name='{node.get('name')}', parent='{node.get('parent_external_id')}', type={node.get('type')}, coords=({node.get('row_index')}, {node.get('column_index')}, {node.get('order_in_folder')})")
         return node
 
     def extract_nodes(self):
         """Извлекает все узлы (техника и папки) из текущего дерева."""
         nodes = []
-        processed_ids = set() # Отслеживаем ID, чтобы не добавлять дубликаты
+        processed_ids = set() 
 
-        # Сначала обрабатываем все элементы техники (div.wt-tree_item)
         vehicle_elements = self.driver.find_elements(By.CSS_SELECTOR, "div.wt-tree_item")
-        # print(f"Найдено {len(vehicle_elements)} элементов div.wt-tree_item")
         for elem in vehicle_elements:
             try:
-                # print(f"Обработка vehicle_element с data-unit-id={elem.get_attribute('data-unit-id')}")
                 node = self.extract_vehicle_node(elem)
-                if node: # extract_vehicle_node может вернуть None, если нет ID
-                    node_id = node.get('data_ulist_id') # Используем data_ulist_id как основной ID
+                if node: 
+                    node_id = node.get('data_ulist_id') 
                     if node_id and node_id not in processed_ids:
                          nodes.append(node)
                          processed_ids.add(node_id)
                          print(f"Добавлен узел техники: {node_id}")
                     elif node_id in processed_ids:
                          print(f"Пропущен дубликат узла техники: {node_id}")
-                    elif not node_id: # Эта проверка теперь внутри extract_vehicle_node
+                    elif not node_id: 
                          print(f"Пропущен узел техники без ID.")
                          pass
 
             except Exception as e:
                 print(f"КРИТИЧЕСКАЯ ОШИБКА при обработке узла техники: {e}")
 
-        # Затем обрабатываем все элементы папок (div.wt-tree_group)
         folder_elements = self.driver.find_elements(
             By.CSS_SELECTOR,
             "div.wt-tree_group[data-unit-id], div.wt-tree_group[data-ulist-id]"
         )
-        # print(f"Найдено {len(folder_elements)} элементов div.wt-tree_group")
         for folder in folder_elements:
              try:
-                 # print(f"Обработка folder_element с data-unit-id={folder.get_attribute('data-unit-id')}")
                  node = self.extract_folder_node(folder)
                  if node:
-                    node_id = node.get('data_ulist_id') # Используем data_ulist_id как основной ID
+                    node_id = node.get('data_ulist_id') 
                     if node_id and node_id not in processed_ids:
                          nodes.append(node)
                          processed_ids.add(node_id)
