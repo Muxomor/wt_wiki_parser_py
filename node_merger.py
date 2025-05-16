@@ -10,6 +10,8 @@ class NodesMerger:
         """
         self.list_view_data = list_view_data if list_view_data is not None else []
         self.tree_view_data = tree_view_data if tree_view_data is not None else []
+        print(f"Инициализация NodesMerger с {len(self.list_view_data)} элементами List View, "
+              f"{len(self.tree_view_data)} элементами Tree View ")
         print(f"Инициализация NodesMerger с {len(self.list_view_data)} элементами List View и {len(self.tree_view_data)} элементами Tree View.")
 
     def _get_definitive_id(self, node):
@@ -28,7 +30,6 @@ class NodesMerger:
         for item in self.list_view_data:
             key = self._get_definitive_id(item)
             if key:
-                # Добавляем недостающие поля из tree view как None по умолчанию
                 item.setdefault('image_url', None)
                 item.setdefault('parent_external_id', None)
                 item.setdefault('column_index', None)
@@ -55,7 +56,7 @@ class NodesMerger:
 
             if key in merged_dict_by_id:
                 merged_node = merged_dict_by_id[key]
-                merged_node['image_url'] = tree_node.get('image_url', merged_node.get('image_url')) # Оставляем старое, если в tree нет
+                merged_node['image_url'] = tree_node.get('image_url', merged_node.get('image_url')) 
                 merged_node['parent_external_id'] = tree_node.get('parent_external_id', merged_node.get('parent_external_id'))
                 merged_node['column_index'] = tree_node.get('column_index', merged_node.get('column_index'))
                 merged_node['row_index'] = tree_node.get('row_index', merged_node.get('row_index'))
@@ -63,7 +64,7 @@ class NodesMerger:
                 merged_node['type'] = tree_node.get('type', merged_node.get('type', 'vehicle'))
                 merged_node['tech_category'] = tree_node.get('tech_category', merged_node.get('tech_category', 'standard'))
                 if tree_node.get('name') and tree_node.get('name') != merged_node.get('name'):
-                     pass 
+                    pass 
                 updated_count += 1
             else:
                 tree_node.setdefault('link', '')
@@ -101,16 +102,26 @@ class NodesMerger:
             folder_id = self._get_definitive_id(folder)
             if not folder_id: continue
 
-            # Ищем дочерние узлы (те, у кого parent_external_id равен ID папки)
             children = [
                 n for n in merged_data
                 if n.get('parent_external_id') == folder_id
             ]
 
             if children:
-                # --- Заполнение 'rank' ---
+                folder_tech_category_candidate = 'premium' 
+                for child in children:
+                    child_tech_category = child.get('tech_category', 'standard') 
+                    if child_tech_category == 'standard':
+                        folder_tech_category_candidate = 'standard'
+                        break 
+                folder['tech_category'] = folder_tech_category_candidate
+            else:
+                pass
+            
+            if children:
+                #Заполнение 'rank' 
                 if not folder.get('rank'):
-                    # Ищем первого подходящего ребенка для ранга
+                    #Ищем первого подходящего ребенка для ранга
                     suitable_child_for_rank = None
                     children.sort(key=lambda x: x.get('order_in_folder') if x.get('order_in_folder') is not None else float('inf'))
 
@@ -131,7 +142,7 @@ class NodesMerger:
                         folder['rank'] = suitable_child_for_rank.get('rank')
 
 
-                # --- Заполнение 'country' и 'vehicle_category' (берем из первого ребенка) ---
+                #Заполнение 'country' и 'vehicle_category' (берем из первого ребенка)
                 first_child = children[0]
                 if not folder.get('country'):
                     folder['country'] = first_child.get('country', '')
@@ -143,7 +154,6 @@ class NodesMerger:
 
         print(f"Пост-обработка папок завершена (обработано {processed_folders}).")
 
-        # 5. Финальная проверка (опционально) - Убедимся, что у всех узлов есть имя? Нет, имя может отсутствовать у техники из TreeView до слияния.
         final_count = len(merged_data)
         print(f"Слияние данных завершено. Итого узлов: {final_count}.")
 

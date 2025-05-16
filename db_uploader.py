@@ -2,7 +2,7 @@
 
 import csv
 from requests import HTTPError
-from db_client import PostgrestClient
+from db_client import PostgrestClient 
 
 def roman_to_int(s: str) -> int:
     """
@@ -21,11 +21,12 @@ def roman_to_int(s: str) -> int:
     return total
 
 def upload_all_data(config,
-                    target_sections,
-                    country_csv="country_flags.csv",
-                    merged_csv="vehicles_merged.csv",
-                    deps_csv="dependencies.csv",
-                    rank_csv="rank_requirements.csv"):
+                      target_sections,
+                      override_rules_data=None,
+                      country_csv="country_flags.csv",
+                      merged_csv="vehicles_merged.csv",
+                      deps_csv="dependencies.csv",
+                      rank_csv="rank_requirements.csv"):
     """
     Полная заливка данных через PostgREST:
       1) Очистка (опционально)
@@ -69,6 +70,9 @@ def upload_all_data(config,
     # 5) читаем merged CSV и строим payload для nodes
     merged_data = list(csv.DictReader(open(merged_csv, encoding='utf-8')))
     nodes_payload = []
+    
+    overridden_by_strict_rules_count = 0
+
     for nd in merged_data:
         ext = (nd.get('data_ulist_id') or '').strip()
         if not ext:
@@ -92,15 +96,15 @@ def upload_all_data(config,
             rank_int = roman_to_int(r)
 
         if nd.get('type') == 'folder':
-            tech_category = 'standard'
+            tech_category = nd.get('tech_category') 
             silver_cost   = 0
             required_exp  = 0
         else:
             silver_raw   = nd.get('silver') or None
             exp_raw      = nd.get('required_exp') or None
-            silver_cost  = int(silver_raw) if silver_raw is not None else None
-            required_exp = int(exp_raw)    if exp_raw    is not None else None
-
+            silver_cost  = int(silver_raw) if silver_raw is not None and silver_raw != '' else None
+            required_exp = int(exp_raw)    if exp_raw is not None and exp_raw != '' else None
+            
             if silver_cost is not None:
                 tech_category = 'standard'
                 if required_exp is None:
@@ -108,6 +112,23 @@ def upload_all_data(config,
             else:
                 tech_category = 'premium'
                 required_exp = None
+
+        if override_rules_data:
+            node_id_for_rules_1 = ext 
+            node_id_for_rules_2 = nd.get('external_id', '').strip()
+
+            forced_category_from_rule = None
+            
+            if node_id_for_rules_1 and node_id_for_rules_1 in override_rules_data:
+                forced_category_from_rule = override_rules_data[node_id_for_rules_1]
+            elif node_id_for_rules_2 and node_id_for_rules_2 in override_rules_data: 
+                forced_category_from_rule = override_rules_data[node_id_for_rules_2]
+            
+            if forced_category_from_rule:
+                if tech_category != forced_category_from_rule:
+                    # print(f"[INFO] Узел '{ext}': tech_category '{tech_category}' изменен на '{forced_category_from_rule}' строгим правилом.")
+                    overridden_by_strict_rules_count += 1
+                tech_category = forced_category_from_rule 
 
         br_raw = nd.get('battle_rating') or None
         if br_raw:
@@ -135,6 +156,12 @@ def upload_all_data(config,
             'order_in_folder': nd.get('order_in_folder') or None,
         })
 
+    if override_rules_data:
+        if overridden_by_strict_rules_count > 0:
+            print(f"[INFO] Строгие правила tech_category были применены к {overridden_by_strict_rules_count} узлам.")
+        else:
+            print("[INFO] Не было узлов, для которых требовалось бы изменение tech_category согласно строгим правилам, или их категории уже совпали.")
+
     # 6) вставляем nodes по одной записи (для отладки)
     print("\nВставка nodes по одной записи")
     for idx, rec in enumerate(nodes_payload, 1):
@@ -152,39 +179,69 @@ def upload_all_data(config,
     print("\nОбновление parent_id")
     node_map = client.fetch_map('nodes', key_field='external_id')
     for nd in merged_data:
-        ext    = (nd.get('data_ulist_id') or '').strip()
-        parent = (nd.get('parent_external_id') or '').strip()
-        print(f"обновляю {ext}, parent_id - {parent}")
-        if ext in node_map and parent in node_map:
-            client._patch(f"nodes?external_id=eq.{ext}",
-                          {'parent_id': node_map[parent]})
+        ext_id_node  = (nd.get('data_ulist_id') or '').strip()
+        parent_ext_id = (nd.get('parent_external_id') or '').strip()
+        
+        print(f"обновляю {ext_id_node}, parent_external_id - {parent_ext_id}")
+        if ext_id_node in node_map and parent_ext_id and parent_ext_id in node_map:
+            try:
+                client._patch(f"nodes?external_id=eq.{ext_id_node}",
+                              {'parent_id': node_map[parent_ext_id]})
+            except Exception as e_patch:
+                print(f"[WARN] Ошибка обновления parent_id для {ext_id_node} (родитель {parent_ext_id}): {e_patch}")
+        # elif parent_ext_id: # Если parent_ext_id есть, но не найден в node_map
+            # print(f"[WARN] Родительский узел с external_id '{parent_ext_id}' не найден в БД для узла '{ext_id_node}'.")
+
     print("parent_id обновлены")
 
     # 8) node_dependencies
     print("\nЗагрузка node_dependencies")
     deps = []
+    node_map_for_deps = client.fetch_map('nodes', key_field='external_id')
     with open(deps_csv, encoding='utf-8') as f:
         for row in csv.DictReader(f):
-            deps.append({
-                'node_id':              node_map[row['node_external_id']],
-                'prerequisite_node_id': node_map[row['prerequisite_external_id']]
-            })
-    client.insert_node_dependencies(deps)
-    print(f"node dependecies : {deps}")
+            node_id_val = row.get('node_external_id')
+            prerequisite_id_val = row.get('prerequisite_external_id')
+
+            if node_id_val in node_map_for_deps and prerequisite_id_val in node_map_for_deps:
+                deps.append({
+                    'node_id':              node_map_for_deps[node_id_val],
+                    'prerequisite_node_id': node_map_for_deps[prerequisite_id_val]
+                })
+            # else:
+                # print(f"[WARN] Пропуск зависимости: один из ID не найден в node_map. Узел: {node_id_val}, Пререквизит: {prerequisite_id_val}")
+    if deps:
+        client.insert_node_dependencies(deps)
+    # print(f"node dependecies : {deps}") # Может быть очень длинным
+    print(f"Загружено {len(deps)} зависимостей.")
+
 
     # 9) rank_requirements
     print("\nЗагрузка rank_requirements")
     rr = []
     with open(rank_csv, encoding='utf-8') as f:
         for row in csv.DictReader(f):
+            nation_name_key = row.get('nation','').strip().lower()
+            vehicle_type_name_key = row.get('vehicle_type','')
+            
+            if nation_name_key not in nat_map:
+                # print(f"[WARN] Пропуск rank_requirement: нация '{nation_name_key}' не найдена.")
+                continue
+            if vehicle_type_name_key not in vt_map:
+                # print(f"[WARN] Пропуск rank_requirement: тип техники '{vehicle_type_name_key}' не найден.")
+                continue
+                
             rr.append({
-                'nation_id':        nat_map[row['nation'].strip().lower()],
-                'vehicle_type_id':  vt_map[row['vehicle_type']],
-                'target_rank':      int(row['target_rank']),
-                'previous_rank':    int(row['previous_rank']),
-                'required_units':   int(row['required_units']),
+                'nation_id':       nat_map[nation_name_key],
+                'vehicle_type_id': vt_map[vehicle_type_name_key],
+                'target_rank':     int(row['target_rank']),
+                'previous_rank':   int(row['previous_rank']),
+                'required_units':  int(row['required_units']),
             })
-    client.insert_rank_requirements(rr)
-    print(f" rank_requirements : {rr}")
+    if rr:
+        client.insert_rank_requirements(rr)
+    # print(f" rank_requirements : {rr}") # Может быть очень длинным
+    print(f"Загружено {len(rr)} требований по рангам.")
+
 
     print("\nВсё успешно загружено через PostgREST")

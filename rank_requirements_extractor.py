@@ -3,7 +3,7 @@ import json
 import csv
 import re
 
-DATA_URL = "http://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/master/char.vromfs.bin_u/config/rank.blkx"
+DATA_URL = "https://cdn.jsdelivr.net/gh/gszabi99/War-Thunder-Datamine@master/char.vromfs.bin_u/config/rank.blkx"
 
 type_mapping = {
     "Aircraft": "Авиация",

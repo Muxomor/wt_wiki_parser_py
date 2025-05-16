@@ -162,5 +162,5 @@ class PageHelper:
 
         if not data.get('battle_rating') or data['battle_rating'] == '—':
             return None
-
+        print(f'Ищвлечен узел из ListView: {data}')
         return data

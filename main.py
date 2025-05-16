@@ -1,11 +1,13 @@
 import os
 import time
+import json
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException 
+from rank_requirements_extractor import run_rank_requirements_extraction
 from db_uploader import upload_all_data
 from page_helper import PageHelper
 from vehicle_get_required_exp import VehicleDataFetcher
@@ -30,6 +32,22 @@ def read_config(config_path='config.txt'):
     except Exception as e:
         raise RuntimeError(f"КРИТИЧЕСКАЯ ОШИБКА: Ошибка чтения конфига '{config_path}': {str(e)}")
     return config
+
+def load_override_rules(filepath="override_rules.json"):
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            rules = json.load(f)
+            print(f"Загружено {len(rules)} строгих правил из {filepath}")
+            return rules
+    except FileNotFoundError:
+        print(f"Файл строгих правил '{filepath}' не найден. Продолжение без строгих правил.")
+        return {}
+    except json.JSONDecodeError as e:
+        print(f"Ошибка декодирования JSON в файле '{filepath}': {e}. Продолжение без строгих правил.")
+        return {}
+    except Exception as e:
+        print(f"Непредвиденная ошибка при загрузке строгих правил из '{filepath}': {e}. Продолжение без строгих правил.")
+        return {}
 
 def configure_driver(config):
     """Настраивает и возвращает экземпляр WebDriver."""
@@ -276,7 +294,8 @@ def main():
         print(f"Узлов после фильтрации по уникальности ID: {len(unique_tree_data)} (удалено дубликатов: {duplicates_count}, узлов без ID: {nodes_without_id_count})")
 
         save_to_csv(unique_tree_data, filename="vehicles_tree_filtered.csv")
-
+        override_rules = load_override_rules(config.get('override_rules_file', 'override_rules.json'))
+    
         ## 3. Объединение данных и формирование зависимостей
         print("\n--- Объединение данных List View и отфильтрованных Tree View ---")
         merger = NodesMerger(vehicles_data, unique_tree_data)
@@ -298,15 +317,14 @@ def main():
         save_dependencies_to_csv(dependencies, filename="dependencies.csv", fieldnames=dep_fieldnames)
 
         ## 4. Извлечение требований для открытия следующей эры (ранга)
-        print("\n--- Шаг 4: Извлечение требований по рангам (пропущен) ---")
-        # print("Извлекаем требования для открытия следующей эры для наций...")
-        # try:
-        #     run_rank_requirements_extraction()
-        #     print("Сбор требований по рангам завершен.")
-        # except NameError:
-        #      print("Предупреждение: Функция run_rank_requirements_extraction не найдена. Пропуск шага.")
-        # except Exception as e:
-        #      print(f"Ошибка при сборе требований по рангам: {e}")
+        print("Извлекаем требования для открытия следующей эры для наций...")
+        try:
+            run_rank_requirements_extraction()
+            print("Сбор требований по рангам завершен.")
+        except NameError:
+             print("Предупреждение: Функция run_rank_requirements_extraction не найдена. Пропуск шага.")
+        except Exception as e:
+             print(f"Ошибка при сборе требований по рангам: {e}")
         rank_req_file = "rank_requirements.csv"
         if not os.path.exists(rank_req_file):
              try:
@@ -317,22 +335,21 @@ def main():
                  print(f"Предупреждение: Не удалось создать пустой файл '{rank_req_file}': {e}")
 
         ## 5. Вставка извлеченных данных в БД
-        print("\n--- Шаг 5: Загрузка данных в БД (пропущен) ---")
-        print("Загрузка данных в БД...")
-        try:
-            upload_all_data(
-                config=config,
-                target_sections=target_sections,
-                country_csv="country_flags.csv",
-                merged_csv="vehicles_merged.csv",
-                deps_csv="dependencies.csv",
-                rank_csv=rank_req_file
-            )
-            print("Загрузка данных в БД успешно завершена.")
-        except NameError:
-             print("Предупреждение: Функция upload_all_data не найдена. Пропуск шага.")
-        except Exception as e:
-            print(f"Ошибка при загрузке данных в БД: {e}")
+        #print("Загрузка данных в БД...")
+        #try:
+        #    upload_all_data(
+        #        config=config,
+        #        target_sections=target_sections,
+        #        country_csv="country_flags.csv",
+        #        merged_csv="vehicles_merged.csv",
+        #        deps_csv="dependencies.csv",
+        #        rank_csv=rank_req_file
+        #    )
+        #    print("Загрузка данных в БД успешно завершена.")
+        #except NameError:
+        #     print("Предупреждение: Функция upload_all_data не найдена. Пропуск шага.")
+        #except Exception as e:
+        #    print(f"Ошибка при загрузке данных в БД: {e}")
 
 
         end_time = time.time()
@@ -353,20 +370,24 @@ def main():
                 print(f"Ошибка при закрытии браузера: {e}")
 
 if __name__ == "__main__":
-    main()
-    #config = read_config()
-    #target_sections = [
-    #        'Авиация', 
-    #        'Вертолёты', 
-    #        'Наземная техника',
-    #        'Большой флот', 
-    #        'Малый флот'
-    #    ]
-    #upload_all_data(
-    #        config=config,
-    #        target_sections=target_sections,
-    #        country_csv="country_flags.csv",
-    #        merged_csv="vehicles_merged.csv",
-    #        deps_csv="dependencies.csv",
-    #        rank_csv="rank_requirements.csv"
-    #    )
+    #main()
+    config = read_config()
+
+    override_rules = load_override_rules()
+
+    target_sections = [
+        'Авиация', 
+        'Вертолёты', 
+        'Наземная техника',
+        'Большой флот', 
+        'Малый флот'
+    ]
+    upload_all_data(
+        config=config,
+        target_sections=target_sections,
+        override_rules_data=override_rules,
+        country_csv="country_flags.csv",
+        merged_csv="vehicles_merged.csv",
+        deps_csv="dependencies.csv",
+        rank_csv="rank_requirements.csv"
+    )
