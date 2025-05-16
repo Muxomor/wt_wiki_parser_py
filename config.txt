@@ -1,4 +1,4 @@
-base_url=http://192.168.0.105:3000/
+base_url=http://192.168.0.105:8881/api
 geckodriver_path=E:\geckodriver-v0.36.0-win32\geckodriver.exe
 firefox_binary=C:\Program Files\Mozilla Firefox\firefox.exe
 headless=false    
