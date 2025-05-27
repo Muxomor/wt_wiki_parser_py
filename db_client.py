@@ -1,5 +1,3 @@
-# db_client.py
-
 import requests
 
 class PostgrestClient:
@@ -55,7 +53,6 @@ class PostgrestClient:
         data = self._get(table, params={'select': f"id,{key_field}"})
         return {rec[key_field]: rec['id'] for rec in data}
 
-    # Основные вставки
     def insert_nodes(self, nodes_payload):
         return self._post('nodes', nodes_payload)
 

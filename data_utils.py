@@ -2,7 +2,7 @@ import csv
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException # Добавлен импорт
+from selenium.common.exceptions import TimeoutException
 from tree_data_extractor import TreeDataExtractor
 
 def save_to_csv(data_list, filename="vehicles.csv", fieldnames=None):
@@ -26,6 +26,22 @@ def save_to_csv(data_list, filename="vehicles.csv", fieldnames=None):
     except Exception as e:
         print(f"Ошибка при сохранении данных в CSV {filename}: {e}")
 
+
+def roman_to_int(s: str) -> int:
+    """
+    Конвертирует римские цифры (I, II, IV и т.д.) в целые числа.
+    """
+    roman_map = {'I': 1, 'V': 5, 'X': 10, 'L': 50,
+                 'C': 100, 'D': 500, 'M': 1000}
+    total, prev = 0, 0
+    for ch in reversed(s.upper()):
+        val = roman_map.get(ch, 0)
+        if val < prev:
+            total -= val
+        else:
+            total += val
+            prev = val
+    return total
 
 def save_country_flags_to_csv(country_images, filename="country_flags.csv"):
     """
@@ -76,7 +92,7 @@ def get_all_nation_tree_data(helper, target_section):
         print(f"Найдено вкладок наций в разделе '{target_section}': {len(nation_tabs)}")
 
         if not nation_tabs:
-             print(f"Предупреждение: Вкладки наций не найдены в разделе '{target_section}'.")
+             print(f"Вкладки наций не найдены в разделе '{target_section}'.")
              return []
 
         extractor = TreeDataExtractor(helper)
@@ -104,7 +120,7 @@ def get_all_nation_tree_data(helper, target_section):
                     try:
                         helper.driver.execute_script("arguments[0].click();", tab)
                     except Exception as js_e:
-                        print(f"КРИТИЧЕСКАЯ ОШИБКА: JS click по вкладке '{nation_label}' также не удался: {js_e}. Пропускаем нацию.")
+                        print(f"JS click по вкладке '{nation_label}' также не удался: {js_e}. Пропускаем нацию.")
                         continue
 
                 time.sleep(2.5)
@@ -123,9 +139,9 @@ def get_all_nation_tree_data(helper, target_section):
                 continue
 
     except TimeoutException:
-        print(f"КРИТИЧЕСКАЯ ОШИБКА: Не удалось найти контейнер с вкладками наций ('div.navtabs_wrapper') в разделе '{target_section}'.")
+        print(f"Не удалось найти контейнер с вкладками наций ('div.navtabs_wrapper') в разделе '{target_section}'.")
     except Exception as e:
-        print(f"КРИТИЧЕСКАЯ ОШИБКА: Общая ошибка при получении данных дерева для раздела '{target_section}': {e}")
+        print(f"Общая ошибка при получении данных дерева для раздела '{target_section}': {e}")
 
     print(f"Сбор данных TreeView для раздела '{target_section}' завершен. Собрано узлов: {len(all_nodes_in_section)}.")
     return all_nodes_in_section

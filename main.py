@@ -128,7 +128,7 @@ def main():
         ]
 
         ## 1. Сбор данных из List View
-        print("\n--- Начало сбора данных из List View ---")
+        print("\nНачало сбора данных из List View ")
         vehicles_data = []
         for section in target_sections:
             try:
@@ -192,11 +192,11 @@ def main():
             except Exception as e:
                 print(f"Непредвиденная ошибка при обработке раздела '{section}' (List View): {e}")
 
-        print(f"\n--- Сбор данных из List View завершен. Всего записей: {len(vehicles_data)} ---")
+        print(f"\nСбор данных из List View завершен. Всего записей: {len(vehicles_data)}")
         save_to_csv(vehicles_data, filename="vehicles_list.csv")
 
         # 1.1 Сбор информации о странах
-        print("\n--- Сбор информации о странах ---")
+        print("\nСбор информации о странах ")
         country_images = {}
         if vehicles_data or target_sections:
             first_section = target_sections[0] if target_sections else 'Авиация' 
@@ -258,11 +258,11 @@ def main():
             except Exception as e:
                 print(f"Непредвиденная ошибка при обработке раздела '{section}' (Tree View): {e}")
 
-        print(f"\n--- Сбор сырых данных из Tree View завершен. Всего узлов: {len(tree_view_data_raw)} ---")
+        print(f"\nСбор сырых данных из Tree View завершен. Всего узлов: {len(tree_view_data_raw)} ")
         save_to_csv(tree_view_data_raw, filename="vehicles_tree_raw.csv")
 
         ## 2.1 Фильтрация данных из Tree View
-        print("\n--- Фильтрация данных из Tree View ---")
+        print("\nФильтрация данных из Tree View ")
         time.sleep(20)
         # Шаг 1: Фильтруем ПАПКИ без имени
         filtered_tree_data_step1 = []
@@ -297,7 +297,7 @@ def main():
         override_rules = load_override_rules(config.get('override_rules_file', 'override_rules.json'))
     
         ## 3. Объединение данных и формирование зависимостей
-        print("\n--- Объединение данных List View и отфильтрованных Tree View ---")
+        print("\nОбъединение данных List View и отфильтрованных Tree View ")
         merger = NodesMerger(vehicles_data, unique_tree_data)
         merged_data = merger.merge_data()
         print(f"Объединение завершено. Всего объединенных узлов: {len(merged_data)}")
@@ -309,20 +309,17 @@ def main():
         ]
         save_to_csv(merged_data, filename="vehicles_merged.csv", fieldnames=merged_fieldnames)
 
-        print("\n--- Извлечение зависимостей ---")
+        print("\nИзвлечение зависимостей")
         dependencies = merger.extract_node_dependencies(merged_data)
         print(f"Извлечено зависимостей: {len(dependencies)}")
 
         dep_fieldnames = ["node_external_id", "prerequisite_external_id"]
         save_dependencies_to_csv(dependencies, filename="dependencies.csv", fieldnames=dep_fieldnames)
 
-        ## 4. Извлечение требований для открытия следующей эры (ранга)
-        print("Извлекаем требования для открытия следующей эры для наций...")
+        ## 4. Извлечение требований для открытия следующего ранга
         try:
             run_rank_requirements_extraction()
             print("Сбор требований по рангам завершен.")
-        except NameError:
-             print("Предупреждение: Функция run_rank_requirements_extraction не найдена. Пропуск шага.")
         except Exception as e:
              print(f"Ошибка при сборе требований по рангам: {e}")
         rank_req_file = "rank_requirements.csv"
@@ -358,7 +355,7 @@ def main():
 
     except Exception as e:
         import traceback
-        print(f"\nКРИТИЧЕСКАЯ ОШИБКА выполнения скрипта: {e}")
+        print(f"\nКРИТИЧЕСКАЯ ОШИБКА ВЫПОЛНЕНИЯ СКРИПТА: {e}")
         print("Traceback:")
         print(traceback.format_exc())
     finally:

@@ -1,24 +1,7 @@
-# db_loader.py
-
 import csv
 from requests import HTTPError
+from data_utils import roman_to_int
 from db_client import PostgrestClient 
-
-def roman_to_int(s: str) -> int:
-    """
-    Конвертирует римские цифры (I, II, IV и т.д.) в целые числа.
-    """
-    roman_map = {'I': 1, 'V': 5, 'X': 10, 'L': 50,
-                 'C': 100, 'D': 500, 'M': 1000}
-    total, prev = 0, 0
-    for ch in reversed(s.upper()):
-        val = roman_map.get(ch, 0)
-        if val < prev:
-            total -= val
-        else:
-            total += val
-            prev = val
-    return total
 
 def upload_all_data(config,
                       target_sections,
@@ -76,17 +59,17 @@ def upload_all_data(config,
     for nd in merged_data:
         ext = (nd.get('data_ulist_id') or '').strip()
         if not ext:
-            print(f"[SKIP] нет external_id: {nd}")
+            print(f"нет external_id: {nd}")
             continue
 
         country_key = (nd.get('country') or '').strip().lower()
         if country_key not in nat_map:
-            print(f"[SKIP] узел {ext}: неизвестная страна '{country_key}'")
+            print(f"узел {ext}: неизвестная страна '{country_key}'")
             continue
 
         vt_key = (nd.get('vehicle_category') or '').strip()
         if vt_key not in vt_map:
-            print(f"[SKIP] узел {ext}: неизвестный vehicle_type '{vt_key}'")
+            print(f"узел {ext}: неизвестный vehicle_type '{vt_key}'")
             continue
 
         r = (nd.get('rank') or '').strip()
@@ -126,7 +109,7 @@ def upload_all_data(config,
             
             if forced_category_from_rule:
                 if tech_category != forced_category_from_rule:
-                    # print(f"[INFO] Узел '{ext}': tech_category '{tech_category}' изменен на '{forced_category_from_rule}' строгим правилом.")
+                    # print(f"Узел '{ext}': tech_category '{tech_category}' изменен на '{forced_category_from_rule}' строгим правилом.")
                     overridden_by_strict_rules_count += 1
                 tech_category = forced_category_from_rule 
 
@@ -158,21 +141,21 @@ def upload_all_data(config,
 
     if override_rules_data:
         if overridden_by_strict_rules_count > 0:
-            print(f"[INFO] Строгие правила tech_category были применены к {overridden_by_strict_rules_count} узлам.")
+            print(f"Строгие правила tech_category были применены к {overridden_by_strict_rules_count} узлам.")
         else:
-            print("[INFO] Не было узлов, для которых требовалось бы изменение tech_category согласно строгим правилам, или их категории уже совпали.")
+            print("Не было узлов, для которых требовалось бы изменение tech_category согласно строгим правилам, или их категории уже совпали.")
 
     # 6) вставляем nodes по одной записи (для отладки)
     print("\nВставка nodes по одной записи")
     for idx, rec in enumerate(nodes_payload, 1):
         try:
             client.insert_nodes([rec])
-            print(f"[ OK ] #{idx}/{len(nodes_payload)} ext={rec['external_id']}")
+            print(f"{idx}/{len(nodes_payload)} ext={rec['external_id']}")
         except HTTPError as e:
-            print(f"[FAIL] #{idx}/{len(nodes_payload)} ext={rec['external_id']}")
-            print(" status:", e.response.status_code)
-            print(" body:", e.response.text)
-            print(" payload:", rec)
+            print(f"{idx}/{len(nodes_payload)} ext={rec['external_id']}")
+            print("status:", e.response.status_code)
+            print("body:", e.response.text)
+            print("payload:", rec)
             raise
 
     # 7) обновление parent_id
@@ -190,7 +173,7 @@ def upload_all_data(config,
             except Exception as e_patch:
                 print(f"[WARN] Ошибка обновления parent_id для {ext_id_node} (родитель {parent_ext_id}): {e_patch}")
         # elif parent_ext_id: # Если parent_ext_id есть, но не найден в node_map
-            # print(f"[WARN] Родительский узел с external_id '{parent_ext_id}' не найден в БД для узла '{ext_id_node}'.")
+            # print(f"Родительский узел с external_id '{parent_ext_id}' не найден в БД для узла '{ext_id_node}'.")
 
     print("parent_id обновлены")
 
@@ -209,7 +192,7 @@ def upload_all_data(config,
                     'prerequisite_node_id': node_map_for_deps[prerequisite_id_val]
                 })
             # else:
-                # print(f"[WARN] Пропуск зависимости: один из ID не найден в node_map. Узел: {node_id_val}, Пререквизит: {prerequisite_id_val}")
+                # print(f"Пропуск зависимости: один из ID не найден в node_map. Узел: {node_id_val}, Пререквизит: {prerequisite_id_val}")
     if deps:
         client.insert_node_dependencies(deps)
     # print(f"node dependecies : {deps}") # Может быть очень длинным
@@ -225,10 +208,10 @@ def upload_all_data(config,
             vehicle_type_name_key = row.get('vehicle_type','')
             
             if nation_name_key not in nat_map:
-                # print(f"[WARN] Пропуск rank_requirement: нация '{nation_name_key}' не найдена.")
+                # print(f"Пропуск rank_requirement: нация '{nation_name_key}' не найдена.")
                 continue
             if vehicle_type_name_key not in vt_map:
-                # print(f"[WARN] Пропуск rank_requirement: тип техники '{vehicle_type_name_key}' не найден.")
+                # print(f"Пропуск rank_requirement: тип техники '{vehicle_type_name_key}' не найден.")
                 continue
                 
             rr.append({
@@ -240,7 +223,7 @@ def upload_all_data(config,
             })
     if rr:
         client.insert_rank_requirements(rr)
-    # print(f" rank_requirements : {rr}") # Может быть очень длинным
+    # print(f"rank_requirements : {rr}")
     print(f"Загружено {len(rr)} требований по рангам.")
 
 

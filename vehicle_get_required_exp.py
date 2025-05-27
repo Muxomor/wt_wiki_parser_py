@@ -22,7 +22,6 @@ class VehicleDataFetcher:
             
             soup = BeautifulSoup(response.text, "html.parser")
 
-            # Поиск всех блоков информации
             info_blocks = soup.find_all("div", class_="game-unit_card-info_item")
             for block in info_blocks:
                 title_div = block.find("div", class_="game-unit_card-info_title")

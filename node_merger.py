@@ -1,5 +1,3 @@
-import pprint 
-
 class NodesMerger:
     """
     Объединяет данные узлов из List View и Tree View.
@@ -142,7 +140,6 @@ class NodesMerger:
                         folder['rank'] = suitable_child_for_rank.get('rank')
 
 
-                #Заполнение 'country' и 'vehicle_category' (берем из первого ребенка)
                 first_child = children[0]
                 if not folder.get('country'):
                     folder['country'] = first_child.get('country', '')
