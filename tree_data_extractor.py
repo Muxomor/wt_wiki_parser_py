@@ -1,6 +1,6 @@
 import re
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException # Добавлен импорт
+from selenium.common.exceptions import NoSuchElementException 
 
 def extract_image_url(style):
     """
