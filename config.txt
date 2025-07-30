@@ -1,4 +1,6 @@
-base_url=http://185.121.134.229:8881/api
+base_url=http://192.168.0.105:8881/api
+parser_api_key=6285d1ced593a6f7b0a232fd3c68052e83f353767e7d95623f006048a8739fdb
+jwt_secret=miDDcpWOWoJ313N6x5Fq7SwEX+TXPQ799MNSjbvGY0A=
 geckodriver_path=E:\geckodriver-v0.36.0-win32\geckodriver.exe
 firefox_binary=C:\Program Files\Mozilla Firefox\firefox.exe
 headless=false    
