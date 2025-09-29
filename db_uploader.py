@@ -11,32 +11,30 @@ def upload_all_data(config,
                       deps_csv="dependencies.csv",
                       rank_csv="rank_requirements.csv"):
     """
-    Полная заливка данных через PostgREST с аутентификацией парсера
+    Полная загрузка данных через PostgREST с аутентификацией парсера
     """
     base_url = config.get('base_url')
     api_key = config.get('parser_api_key')
-    jwt_secret = config.get('jwt_secret')  # Новый параметр
+    jwt_secret = config.get('jwt_secret') 
     
     if not base_url:
         raise ValueError("В config.txt не указан base_url для PostgREST")
     
     if not api_key:
-        print("⚠️  ВНИМАНИЕ: parser_api_key не указан в config.txt")
+        print("ВНИМАНИЕ: parser_api_key не указан в config.txt")
     
     if not jwt_secret:
-        print("⚠️  ВНИМАНИЕ: jwt_secret не указан в config.txt")
+        print("ВНИМАНИЕ: jwt_secret не указан в config.txt")
     
-    # Создаем клиент с JWT токеном
     client = PostgrestClient(base_url, api_key, jwt_secret)
     
-    # Тестируем подключение
-    print("🔍 Тестирование подключения...")
+    print("Тестирование подключения...")
     client.test_connection()
     
-    print("\n🚀 Начинаем загрузку данных...")
+    print("\nНачинаем загрузку данных...")
 
     # 1) очистка всех таблиц
-    print("\n🗑️  Очистка таблиц...")
+    print("\nОчистка таблиц...")
     for tbl in ('node_dependencies','rank_requirements','nodes','nations','vehicle_types'):
         try:
             client.delete_all(tbl)
@@ -45,11 +43,11 @@ def upload_all_data(config,
             raise
 
     # 2) vehicle_types
-    print("\n📝 Заливаю vehicle_types…")
+    print("\nЗаливаю vehicle_types…")
     client.upsert_vehicle_types(target_sections)
 
     # 3) nations
-    print("\n🏳️  Заливаю nations…")
+    print("\nЗаливаю nations…")
     nations_payload = []
     try:
         with open(country_csv, encoding='utf-8') as f:
@@ -60,21 +58,21 @@ def upload_all_data(config,
                 })
         client.upsert_nations(nations_payload)
     except FileNotFoundError:
-        print(f"❌ Файл {country_csv} не найден")
+        print(f"Файл {country_csv} не найден")
         raise
 
     # 4) fetch_map справочников
-    print("\n📋 Загружаю справочники...")
+    print("\nЗагружаю справочники...")
     vt_map  = client.fetch_map('vehicle_types', key_field='name')
     nat_map = client.fetch_map('nations',       key_field='name')
 
     # 5) читаем merged CSV и строим payload для nodes
-    print(f"\n🚗 Читаю данные из {merged_csv}...")
+    print(f"\nЧитаю данные из {merged_csv}...")
     try:
         merged_data = list(csv.DictReader(open(merged_csv, encoding='utf-8')))
-        print(f"📊 Найдено {len(merged_data)} записей для обработки")
+        print(f"Найдено {len(merged_data)} записей для обработки")
     except FileNotFoundError:
-        print(f"❌ Файл {merged_csv} не найден")
+        print(f"Файл {merged_csv} не найден")
         raise
     
     nodes_payload = []
@@ -83,17 +81,17 @@ def upload_all_data(config,
     for nd in merged_data:
         ext = (nd.get('data_ulist_id') or '').strip()
         if not ext:
-            print(f"⚠️  нет external_id: {nd}")
+            print(f"нет external_id: {nd}")
             continue
 
         country_key = (nd.get('country') or '').strip().lower()
         if country_key not in nat_map:
-            print(f"⚠️  узел {ext}: неизвестная страна '{country_key}'")
+            print(f"узел {ext}: неизвестная страна '{country_key}'")
             continue
 
         vt_key = (nd.get('vehicle_category') or '').strip()
         if vt_key not in vt_map:
-            print(f"⚠️  узел {ext}: неизвестный vehicle_type '{vt_key}'")
+            print(f"узел {ext}: неизвестный vehicle_type '{vt_key}'")
             continue
 
         r = (nd.get('rank') or '').strip()
@@ -163,15 +161,15 @@ def upload_all_data(config,
         })
 
     if override_rules_data and overridden_by_strict_rules_count > 0:
-        print(f"📝 Строгие правила применены к {overridden_by_strict_rules_count} узлам")
+        print(f"Строгие правила применены к {overridden_by_strict_rules_count} узлам")
 
     # 6) вставляем nodes по одной записи
-    print(f"\n🚗 Вставка {len(nodes_payload)} узлов...")
+    print(f"\nВставка {len(nodes_payload)} узлов...")
     for idx, rec in enumerate(nodes_payload, 1):
         try:
             client.insert_nodes([rec])
             if idx % 100 == 0:  # Прогресс каждые 100 записей
-                print(f"📊 {idx}/{len(nodes_payload)} записей обработано")
+                print(f"{idx}/{len(nodes_payload)} записей обработано")
         except HTTPError as e:
             print(f"❌ Ошибка вставки узла {rec['external_id']}:")
             print(f"   Статус: {e.response.status_code}")
@@ -179,7 +177,7 @@ def upload_all_data(config,
             raise
 
     # 7) обновление parent_id
-    print("\n🔗 Обновление parent_id...")
+    print("\nОбновление parent_id...")
     node_map = client.fetch_map('nodes', key_field='external_id')
     updated_count = 0
     
@@ -193,12 +191,12 @@ def upload_all_data(config,
                               {'parent_id': node_map[parent_ext_id]})
                 updated_count += 1
             except Exception as e_patch:
-                print(f"⚠️  Ошибка обновления parent_id для {ext_id_node}: {e_patch}")
+                print(f"Ошибка обновления parent_id для {ext_id_node}: {e_patch}")
     
-    print(f"✅ Обновлено {updated_count} связей parent_id")
+    print(f"Обновлено {updated_count} связей parent_id")
 
     # 8) node_dependencies
-    print(f"\n🔗 Загрузка зависимостей из {deps_csv}...")
+    print(f"\nЗагрузка зависимостей из {deps_csv}...")
     deps = []
     node_map_for_deps = client.fetch_map('nodes', key_field='external_id')
     
@@ -217,13 +215,13 @@ def upload_all_data(config,
         if deps:
             client.insert_node_dependencies(deps)
         else:
-            print("⚠️  Зависимости не найдены")
+            print("Зависимости не найдены")
             
     except FileNotFoundError:
-        print(f"⚠️  Файл {deps_csv} не найден, пропуск зависимостей")
+        print(f"Файл {deps_csv} не найден, пропуск зависимостей")
 
     # 9) rank_requirements
-    print(f"\n🎖️  Загрузка требований по рангам из {rank_csv}...")
+    print(f"\nЗагрузка требований по рангам из {rank_csv}...")
     rr = []
     
     try:
@@ -248,9 +246,9 @@ def upload_all_data(config,
         if rr:
             client.insert_rank_requirements(rr)
         else:
-            print("⚠️  Требования по рангам не найдены")
+            print("Требования по рангам не найдены")
             
     except FileNotFoundError:
-        print(f"⚠️  Файл {rank_csv} не найден, пропуск требований по рангам")
+        print(f"Файл {rank_csv} не найден, пропуск требований по рангам")
 
-    print("\n🎉 Всё успешно загружено через PostgREST!")
+    print("\nВсё успешно загружено через PostgREST!")

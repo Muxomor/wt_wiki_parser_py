@@ -79,7 +79,7 @@ class TreeDataExtractor:
                            parent_group_element = parent_container.find_element(By.XPATH, "./ancestor::div[contains(@class, 'wt-tree_group')][1]")
                            parent_ulist_id = parent_group_element.get_attribute("data-ulist-id")
                            parent_unit_id = parent_group_element.get_attribute("data-unit-id")
-                           parent_id_from_group = parent_ulist_id or parent_unit_id # Приоритет ulist_id
+                           parent_id_from_group = parent_ulist_id or parent_unit_id
 
                            if parent_id_from_group:
                                 node['parent_external_id'] = parent_id_from_group
